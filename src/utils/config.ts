@@ -1,25 +1,33 @@
 import Conf from 'conf';
 
-interface ConfigSchema {
-    lastInstallPath?: string;
-}
-
+// Handle ESM/CJS interop for Conf
 // @ts-ignore
 const ConfClass = Conf.default || Conf;
 
-const config = new ConfClass<ConfigSchema>({
-    projectName: 'poe2-kg-client-patch-butler',
+const config = new ConfClass({
+    projectName: 'poe2-patch-butler',
     schema: {
         lastInstallPath: {
             type: 'string',
         },
+        cookie: {
+            type: 'string'
+        }
     },
 });
 
-export function getLastInstallPath(): string | undefined {
-    return config.get('lastInstallPath');
-}
+export const getLastInstallPath = (): string | undefined => {
+    return config.get('lastInstallPath') as string | undefined;
+};
 
-export function setLastInstallPath(path: string): void {
+export const setLastInstallPath = (path: string): void => {
     config.set('lastInstallPath', path);
-}
+};
+
+export const getCookie = (): string | undefined => {
+    return config.get('cookie') as string | undefined;
+};
+
+export const setCookie = (cookie: string): void => {
+    config.set('cookie', cookie);
+};
