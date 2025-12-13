@@ -1,3 +1,28 @@
+<!-- prettier-ignore-start -->
+
+| GitHub Release                                                 | Build Status                                             | License                                                        | Sponsors                                                          | Buy Me a Coffee                                                   |
+|----------------------------------------------------------------|----------------------------------------------------------|----------------------------------------------------------------|-------------------------------------------------------------------|-------------------------------------------------------------------|
+| [![GitHub release][github-release-badge]][github-release-link] | [![Build Status][build-status-badge]][build-status-link] | [![GitHub license][github-license-badge]][github-license-link] | [![GitHub sponsors][github-sponsors-badge]][github-sponsors-link] | [![Buy Me a Coffee][buy-me-a-coffee-badge]][buy-me-a-coffee-link] |
+
+<!-- prettier-ignore-end -->
+
+<!-- Badges -->
+
+[github-release-badge]: https://img.shields.io/github/v/release/NERDHEAD-lab/POE2-KG-Client-Patch-Butler?logo=github
+[build-status-badge]: https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/actions/workflows/release-please.yml/badge.svg
+[github-license-badge]: https://img.shields.io/github/license/NERDHEAD-lab/POE2-KG-Client-Patch-Butler
+[github-sponsors-badge]: https://img.shields.io/github/sponsors/NERDHEAD-lab?logo=github&logoColor=white
+[buy-me-a-coffee-badge]: https://img.shields.io/badge/Buy%20Me%20a%20Coffee-yellow?logo=buymeacoffee&logoColor=white
+
+<!-- Links -->
+
+[github-release-link]: https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/releases
+[build-status-link]: https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/actions
+[github-license-link]: https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/blob/master/LICENSE
+[github-sponsors-link]: https://github.com/sponsors/NERDHEAD-lab
+[buy-me-a-coffee-link]: https://coff.ee/nerdhead_lab
+
+
 # POE2 KG Client Patch Butler
 
 ![Demo](docs/poe2%20patch%20성공.gif)
