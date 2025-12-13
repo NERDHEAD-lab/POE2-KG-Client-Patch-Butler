@@ -1,6 +1,6 @@
 {
     "name": "poe2-kg-client-patch-butler",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "description": "Helper tool for Kakao Games POE2 client patching",
     "main": "dist/cli.js",
     "type": "module",
