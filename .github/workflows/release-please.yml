@@ -1,0 +1,49 @@
+name: release-please.yml
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  release-please:
+    runs-on: windows-latest
+    outputs:
+        release_created: ${{ steps.release.outputs.release_created }}
+        tag_name: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: googleapis/release-please-action@v4
+        id: release
+        with:
+          token: '${{ secrets.GITHUB_TOKEN }}'
+          config-file: 'release-please-config.json'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # change these commands to build your project
+      - name: Build and package
+        if: ${{ steps.release.outputs.release_created }}
+        run: |
+          npm ci
+          npm run package
+
+      # change this to your built artifact
+      - name: Upload release
+        uses: softprops/action-gh-release@v1
+        if: ${{ steps.release.outputs.release_created }}
+        with:
+          files: poe2-patch-butler.exe
+          tag_name: ${{ steps.release.outputs.tag_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
