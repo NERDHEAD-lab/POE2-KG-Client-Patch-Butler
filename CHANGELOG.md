@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/compare/1.0.2...1.1.0) (2025-12-13)
+
+
+### Features
+
+* 런처가 실행되지 않고 종료되는 현상에 대응하는 강제 패치 추가 ([15ceec6](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/15ceec642b458168707709be9311c78af2d47992))
+
 ## [1.0.2](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/compare/1.0.1...1.0.2) (2025-12-13)
 
 
