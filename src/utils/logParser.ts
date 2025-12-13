@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
-const WHITELIST = [
+export const WHITELIST = [
     'Client.exe',
     'PackCheck.exe',
     'PathOfExile.exe',
@@ -105,5 +105,16 @@ export async function parseLog(installPath: string): Promise<LogParseResult> {
         backupWebRoot,
         filesToDownload,
         hasError
+    };
+}
+
+export function generateForcePatchResult(baseResult: LogParseResult): LogParseResult {
+    if (!baseResult.webRoot) {
+        throw new Error('Web Root not found in log. Cannot force patch.');
+    }
+    return {
+        ...baseResult,
+        filesToDownload: [...WHITELIST],
+        hasError: true
     };
 }
