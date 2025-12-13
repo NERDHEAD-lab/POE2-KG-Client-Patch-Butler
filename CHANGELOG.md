@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/compare/1.0.0...1.0.1) (2025-12-13)
+
+
+### Bug Fixes
+
+* change node version 20 -&gt; 18 ([8499ac5](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/8499ac5c10bc1f4aedd5f7a51039e6c8e2a88d98))
+
 ## [1.0.0](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/compare/1.0.0...1.0.0) (2025-12-13)
 
 
