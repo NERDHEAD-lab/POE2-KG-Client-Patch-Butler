@@ -3,12 +3,12 @@ import { Box, Text, useInput, useApp } from 'ink';
 import path from 'path';
 import { getInstallPath } from '../utils/registry.js';
 import { getLastInstallPath, setLastInstallPath } from '../utils/config.js';
-import { parseLog, LogParseResult } from '../utils/logParser.js';
+import { parseLog, LogParseResult, generateForcePatchResult } from '../utils/logParser.js';
 import { downloadFiles, cleanupTempDir } from '../utils/downloader.js';
 import { PathInput } from './PathInput.js';
 import { ProgressBar } from './ProgressBar.js';
 
-type Step = 'INIT' | 'CONFIRM_PATH' | 'INPUT_PATH' | 'ANALYZING' | 'READY_TO_DOWNLOAD' | 'EDIT_WEBROOT' | 'DOWNLOADING' | 'DONE' | 'ERROR';
+type Step = 'INIT' | 'CONFIRM_PATH' | 'INPUT_PATH' | 'ANALYZING' | 'CONFIRM_FORCE' | 'READY_TO_DOWNLOAD' | 'EDIT_WEBROOT' | 'DOWNLOADING' | 'DONE' | 'ERROR';
 
 const extractVersion = (url: string | null): string | null => {
     if (!url) return null;
@@ -62,6 +62,29 @@ const App: React.FC = () => {
                 setStep('ANALYZING');
             } else if (input === 'e' || input === 'E') {
                 setStep('INPUT_PATH');
+            } else if (input === 'q' || input === 'Q') {
+                exit();
+            }
+        } else if (step === 'CONFIRM_FORCE') {
+            if (input === 'f' || input === 'F') {
+                if (logResult) {
+                    try {
+                        const newResult = generateForcePatchResult(logResult);
+                        setLogResult(newResult);
+
+                        const initialStates: any = {};
+                        newResult.filesToDownload.forEach(f => {
+                            initialStates[f] = { status: 'waiting', progress: 0 };
+                        });
+                        setFileStates(initialStates);
+                        setStep('READY_TO_DOWNLOAD');
+                    } catch (e) {
+                        setError(e instanceof Error ? e.message : String(e));
+                        setStep('ERROR');
+                    }
+                }
+            } else if (key.return) {
+                setStep('DONE');
             } else if (input === 'q' || input === 'Q') {
                 exit();
             }
@@ -119,7 +142,7 @@ const App: React.FC = () => {
                     setLogResult(result);
 
                     if (!result.hasError || result.filesToDownload.length === 0) {
-                        setStep('DONE');
+                        setStep('CONFIRM_FORCE');
                     } else {
                         // 파일 상태 초기화
                         const initialStates: any = {};
@@ -199,6 +222,16 @@ const App: React.FC = () => {
             )}
 
             {step === 'ANALYZING' && <Text>로그 분석 중...</Text>}
+
+            {step === 'CONFIRM_FORCE' && (
+                <Box flexDirection="column">
+                    <Text color="green">최근 로그에서 패치 오류가 발견되지 않았습니다.</Text>
+                    <Text color="gray">런처가 실행되지 않고 종료되는 등의 증상에 권장 드립니다.</Text>
+                    <Box marginBottom={1} />
+                    <Text>핵심 파일들을 강제로 패치하려면 <Text bold color="red">F</Text>를 누르세요. (현재 버전: <Text color="yellow">{extractVersion(logResult ? logResult.webRoot : null) || 'Unknown'}</Text>)</Text>
+                    <Text>종료하려면 <Text bold color="cyan">Enter</Text>를 누르세요.</Text>
+                </Box>
+            )}
 
             {step === 'READY_TO_DOWNLOAD' && logResult && (
                 <Box flexDirection="column">
