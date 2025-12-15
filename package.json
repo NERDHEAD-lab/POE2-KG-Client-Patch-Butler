@@ -40,6 +40,7 @@
         "@types/winreg": "^1.2.36",
         "postject": "^1.0.0-alpha.6",
         "react-devtools-core": "^4.28.5",
+        "resedit-cli": "^3.0.1",
         "ts-node": "^10.9.1",
         "tsup": "^8.0.0",
         "typescript": "^5.3.3"
