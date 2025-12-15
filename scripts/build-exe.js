@@ -3,6 +3,9 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
 const distDir = path.join(rootDir, 'dist');
@@ -77,8 +80,65 @@ process.on('exit', () => {
         console.log('--- Injecting Blob ---');
         runCommand(`npx postject ${exeName} NODE_SEA_BLOB dist/cli.blob --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2`);
 
+        // 6. Inject Icon
+        console.log('--- Injecting Icon ---');
+
+        const packageJson = require(path.join(rootDir, 'package.json'));
+        const version = packageJson.version; // 1.0.0
+        //windows version format: n.n.n -> n.n.n.0
+        const winVersion = version + '.0';
+
+        const iconPath = path.resolve(rootDir, 'assets', 'icon.ico');
+        if (!fs.existsSync(iconPath)) {
+            console.log('Icon not found, skipping injection.');
+            return;
+        }
+        try {
+            const reseditCmd = [
+                `npx resedit`,
+                `--in "${exeName}"`,
+                `--out "${exeName}"`,
+                `--icon 1,"${iconPath}"`,
+                `--file-version ${winVersion}`,
+                `--product-version ${winVersion}`,
+                `--company-name "NERDHEAD LAB"`,
+                `--file-description "POE2 카카오게임즈 클라이언트 오류 수정 도구"`,
+                `--product-name "POE2 Patch Butler"`,
+                `--ignore-signed`,
+            ].join(' ');
+
+            runCommand(reseditCmd);
+        } catch (e) {
+            console.warn('Failed to inject icon:', e);
+        }
+
         console.log('--- Build Complete ---');
         console.log(`Executable created at: ${exePath}`);
+
+        // 7. Create Installer (Optional)
+        // Check if innosetup-compiler is available
+        try {
+            console.log('--- Creating Installer ---');
+            const innosetupCompiler = require('innosetup-compiler');
+            const issPath = path.resolve(rootDir, 'scripts', 'installer.iss');
+
+            await new Promise((resolve, reject) => {
+                innosetupCompiler(issPath, {
+                    gui: false,
+                    verbose: true,
+                }, (error) => {
+                    if (error) {
+                        reject(error);
+                    } else {
+                        resolve();
+                    }
+                });
+            });
+            console.log('Installer created successfully!');
+        } catch (e) {
+            console.warn('Failed to create installer (Inno Setup might not be installed or configured):', e.message);
+            console.log('Skipping installer creation.');
+        }
 
     } catch (error) {
         console.error('Build failed:', error);

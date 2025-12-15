@@ -1,345 +1,255 @@
-import React, { useState, useEffect } from 'react';
-import { Box, Text, useInput, useApp } from 'ink';
+import React, { useState } from 'react';
+import { Box, Text, useApp, useInput, useStdout } from 'ink';
+import Init from './Init.js';
+import MainMenu from './MainMenu.js';
+import CasePatchFailed from './Menu/CasePatchFailed.js';
+import CaseExecuteFailed from './Menu/CaseExecuteFailed.js';
+import CaseCrashing from './Menu/CaseCrashing.js';
+import CaseReportIssue from './Menu/CaseReportIssue.js';
+import AutoDetectNotice from './AutoDetectNotice.js';
+import { getAppVersion } from '../utils/version.js';
+import { checkForUpdate } from '../utils/updater.js';
+import { performSelfUpdate } from '../utils/selfUpdate.js';
+import { downloadFile } from '../utils/downloader.js';
+import { spawn } from 'child_process';
 import path from 'path';
-import { getInstallPath } from '../utils/registry.js';
-import { getLastInstallPath, setLastInstallPath } from '../utils/config.js';
-import { parseLog, LogParseResult, generateForcePatchResult } from '../utils/logParser.js';
-import { downloadFiles, cleanupTempDir } from '../utils/downloader.js';
-import { PathInput } from './PathInput.js';
-import { ProgressBar } from './ProgressBar.js';
+import os from 'os';
 
-type Step = 'INIT' | 'CONFIRM_PATH' | 'INPUT_PATH' | 'ANALYZING' | 'CONFIRM_FORCE' | 'READY_TO_DOWNLOAD' | 'EDIT_WEBROOT' | 'DOWNLOADING' | 'DONE' | 'ERROR';
+type Screen = 'INIT' | 'MAIN_MENU' | 'CASE_1' | 'CASE_2' | 'CASE_3' | 'CASE_0';
 
-const extractVersion = (url: string | null): string | null => {
-    if (!url) return null;
-    const match = url.match(/\/patch\/([^\/]+)\/?/);
-    return match ? match[1] : null;
-};
+interface AppProps {
+    initialMode?: 'NORMAL' | 'FIX_PATCH';
+}
 
-const App: React.FC = () => {
+const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
     const { exit } = useApp();
-    const [step, setStep] = useState<Step>('INIT');
-    const [installPath, setInstallPath] = useState<string>('');
-    const [error, setError] = useState<string>('');
-    const [logResult, setLogResult] = useState<LogParseResult | null>(null);
-    const [fileStates, setFileStates] = useState<Record<string, { status: 'waiting' | 'downloading' | 'done' | 'error', progress: number, error?: Error }>>({});
-    const [downloadResult, setDownloadResult] = useState<{ success: boolean; failures: { fileName: string; error: Error }[] } | null>(null);
+    const { stdout } = useStdout();
 
-    const [cleanupStatus, setCleanupStatus] = useState<'pending' | 'cleaning' | 'done' | 'kept'>('pending');
+    // Always start at INIT to ensure installPath is loaded context correctly
+    const [screen, setScreen] = useState<Screen>('INIT');
+    const [installPath, setInstallPath] = useState('');
+    const [appVersion, setAppVersion] = useState(getAppVersion());
 
-    // WebRoot 수정용 상태
-    const [editWebRoot, setEditWebRoot] = useState<string>('');
 
-    useEffect(() => {
-        // 초기화: 레지스트리 또는 저장된 설정에서 설치 경로 로드
-        const init = async () => {
-            try {
-                const savedPath = getLastInstallPath();
-                if (savedPath) {
-                    setInstallPath(savedPath);
-                    setStep('CONFIRM_PATH');
-                    return;
+
+    const handleInitDone = (path: string, version: string) => {
+        setInstallPath(path);
+        setAppVersion(version);
+
+        if (initialMode === 'FIX_PATCH') {
+            setScreen('CASE_1');
+        } else {
+            setScreen('MAIN_MENU');
+        }
+    };
+    const [updateInfo, setUpdateInfo] = useState<{ url: string, version: string } | null>(null);
+    const [isUpdating, setIsUpdating] = useState(false);
+    const [downloadProgress, setDownloadProgress] = useState(0);
+    const [initStatus, setInitStatus] = useState<'LOADING' | 'PROCESS_CHECK' | 'CONFIRM' | 'INPUT' | null>(null);
+
+    React.useEffect(() => {
+        if (process.env.NODE_ENV !== 'development') {
+            checkForUpdate().then(res => {
+                if (res.hasUpdate && res.downloadUrl) {
+                    setUpdateInfo({ url: res.downloadUrl, version: res.latestVersion });
                 }
-
-                const regPath = await getInstallPath();
-                if (regPath) {
-                    setInstallPath(regPath);
-                    setStep('CONFIRM_PATH');
-                } else {
-                    setStep('INPUT_PATH');
-                }
-            } catch (err) {
-                setStep('INPUT_PATH');
-            }
-        };
-        init();
+            });
+        }
     }, []);
 
-    useInput((input, key) => {
-        if (step === 'CONFIRM_PATH') {
-            if (key.return) {
-                setAndSavePath(installPath);
-                setStep('ANALYZING');
-            } else if (input === 'e' || input === 'E') {
-                setStep('INPUT_PATH');
-            } else if (input === 'q' || input === 'Q') {
-                exit();
-            }
-        } else if (step === 'CONFIRM_FORCE') {
-            if (input === 'f' || input === 'F') {
-                if (logResult) {
-                    try {
-                        const newResult = generateForcePatchResult(logResult);
-                        setLogResult(newResult);
+    const handleUpdate = () => {
+        if (updateInfo && !isUpdating) {
+            setIsUpdating(true);
+            const tempPath = path.join(os.tmpdir(), `poe2-patch-butler-${updateInfo.version}.exe`);
 
-                        const initialStates: any = {};
-                        newResult.filesToDownload.forEach(f => {
-                            initialStates[f] = { status: 'waiting', progress: 0 };
-                        });
-                        setFileStates(initialStates);
-                        setStep('READY_TO_DOWNLOAD');
-                    } catch (e) {
-                        setError(e instanceof Error ? e.message : String(e));
-                        setStep('ERROR');
-                    }
+            const doUpdate = async () => {
+                try {
+                    await downloadFile(updateInfo.url, tempPath, 'update.exe', (s) => {
+                        setDownloadProgress(s.progress);
+                    });
+                    performSelfUpdate(tempPath);
+                } catch (e) {
+                    // Update failed, reset?
+                    setIsUpdating(false);
                 }
-            } else if (key.return) {
-                setStep('DONE');
-            } else if (input === 'q' || input === 'Q') {
-                exit();
+            };
+            doUpdate();
+        }
+    };
+
+    const handleOpenPatchNotes = () => {
+        const url = 'https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/releases';
+        const start = (process.platform == 'darwin' ? 'open' : process.platform == 'win32' ? 'start' : 'xdg-open');
+        spawn('cmd', ['/c', 'start', url], { windowsVerbatimArguments: true });
+    };
+
+    // Auto-detect toggle
+    const [isAutoDetectEnabled, setIsAutoDetectEnabled] = useState(false);
+    const [showAutoDetectMsg, setShowAutoDetectMsg] = useState(false);
+
+    React.useEffect(() => {
+        const checkRegistry = async () => {
+            try {
+                const { exec } = await import('child_process');
+                exec('reg query "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" /v "POE2_Patch_Butler_Watch"', (err) => {
+                    setIsAutoDetectEnabled(!err);
+                });
+            } catch (e) { }
+        };
+        checkRegistry();
+    }, []);
+
+    const toggleAutoDetect = async () => {
+        const { exec } = await import('child_process');
+        const exePath = process.execPath;
+
+        if (isAutoDetectEnabled) {
+            // Turning OFF
+            // 1. Remove from registry (ignore error if key doesn't exist)
+            exec('reg delete "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" /v "POE2_Patch_Butler_Watch" /f', () => {
+                // Always proceed to update state and kill process
+                setIsAutoDetectEnabled(false);
+                setShowAutoDetectMsg(true);
+                setTimeout(() => setShowAutoDetectMsg(false), 3000);
+
+                // 2. Kill running watcher process FORCEFULLY
+                const currentExeName = path.basename(process.execPath);
+                // Use Stop-Process -Force to ensure termination
+                const psCommand = `Get-CimInstance Win32_Process | Where-Object { $_.Name -eq '${currentExeName}' -and $_.CommandLine -like '*--watch*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }`;
+                exec(`powershell -Command "${psCommand}"`, { windowsHide: true }, () => { });
+            });
+        } else {
+            // Add to registry
+            const command = `\\"${exePath}\\" --watch`;
+            exec(`reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" /v "POE2_Patch_Butler_Watch" /t REG_SZ /d "${command}" /f`, (err) => {
+                if (!err) {
+                    setIsAutoDetectEnabled(true);
+                    setShowAutoDetectMsg(true);
+                    setTimeout(() => setShowAutoDetectMsg(false), 3000);
+
+                    // Start watcher process immediately
+                    // Use subprocess to detach
+                    spawn(exePath, ['--watch'], {
+                        detached: true,
+                        stdio: 'ignore',
+                        windowsHide: true
+                    }).unref();
+                }
+            });
+        }
+    };
+
+    useInput((input, key) => {
+        const isNotInputMode = screen === 'MAIN_MENU' || (screen === 'INIT' && initStatus !== 'INPUT');
+
+        if (isNotInputMode) {
+            if (input === 'u' || input === 'U') {
+                handleUpdate();
             }
-        } else if (step === 'READY_TO_DOWNLOAD') {
-            if (key.return) {
-                setStep('DOWNLOADING');
-            } else if (input === 'e' || input === 'E') {
-                if (logResult?.webRoot) {
-                    setEditWebRoot(logResult.webRoot);
-                    setStep('EDIT_WEBROOT');
-                }
-            } else if (input === 'q' || input === 'Q') {
-                exit();
+            if (input === 'p' || input === 'P') {
+                handleOpenPatchNotes();
             }
-        } else if (step === 'DONE') {
-            if (cleanupStatus === 'pending') {
-                if (key.return) {
-                    setCleanupStatus('cleaning');
-                    cleanupTempDir(installPath).then(() => setCleanupStatus('done'));
-                } else if (input === 'q' || input === 'Q' || input === 'n' || input === 'N' || key.escape) {
-                    setCleanupStatus('kept');
-                }
-            } else {
-                // 종료 키 처리
-                if (input || key.return || key.escape || key.backspace || key.delete) {
-                    exit();
-                }
-            }
-        } else if (step === 'ERROR') {
-            // Any key exits
-            if (input || key.return || key.escape || key.backspace || key.delete) {
-                exit();
+            if (input === 'a' || input === 'A') {
+                toggleAutoDetect();
             }
         }
     });
 
-    const setAndSavePath = (path: string) => {
-        try {
-            setInstallPath(path);
-            setLastInstallPath(path);
-        } catch (e) {
-            // 저장 실패 시에도 진행에는 문제 없도록 처리
-            setInstallPath(path);
+    const getDayCount = () => {
+        // 최초 버그 발생일
+        // ref: https://kakaogames.oqupie.com/portal/2881/article/73761
+        const startDate = new Date('2024-12-07');
+        const today = new Date();
+        const diffTime = today.getTime() - startDate.getTime();
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        return diffDays + 1; // 1일차 시작
+    };
+
+
+
+    const handleMenuSelect = (option: number) => {
+        switch (option) {
+            case 1: setScreen('CASE_1'); break;
+            case 2: setScreen('CASE_2'); break;
+            case 3: setScreen('CASE_3'); break;
+            case 0: setScreen('CASE_0'); break;
         }
     };
 
-    useEffect(() => {
-        if (step === 'ANALYZING') {
-            const analyze = async () => {
-                // UX 개선 및 상태 전환 안정화를 위한 지연
-                await new Promise(r => setTimeout(r, 500));
-
-                try {
-                    const result = await parseLog(installPath);
-                    setLogResult(result);
-
-                    if (!result.hasError || result.filesToDownload.length === 0) {
-                        setStep('CONFIRM_FORCE');
-                    } else {
-                        // 파일 상태 초기화
-                        const initialStates: any = {};
-                        result.filesToDownload.forEach(f => {
-                            initialStates[f] = { status: 'waiting', progress: 0 };
-                        });
-                        setFileStates(initialStates);
-                        setStep('READY_TO_DOWNLOAD');
-                    }
-                } catch (err) {
-                    setError(err instanceof Error ? err.message : String(err));
-                    setStep('ERROR');
-                }
-            };
-            analyze();
+    const renderBody = () => {
+        if (isUpdating) {
+            return (
+                <Box flexDirection="column" alignItems="center" justifyContent="center">
+                    <Text color="green">새로운 버전 다운로드 중... {downloadProgress}%</Text>
+                    <Text>다운로드 완료 후 자동으로 재시작됩니다.</Text>
+                </Box>
+            );
         }
-    }, [step, installPath]);
 
-    useEffect(() => {
-        if (step === 'DOWNLOADING' && logResult) {
-            const download = async () => {
-                try {
-                    if (!logResult.webRoot) throw new Error('Web root not found in log.');
-
-                    const result = await downloadFiles(
-                        logResult.webRoot,
-                        logResult.backupWebRoot || logResult.webRoot,
-                        logResult.filesToDownload,
-                        installPath,
-                        (status) => {
-                            setFileStates(prev => ({
-                                ...prev,
-                                [status.fileName]: {
-                                    status: status.status,
-                                    progress: status.progress,
-                                    error: status.error
-                                }
-                            }));
-                        }
-                    );
-                    setDownloadResult(result);
-                    setStep('DONE');
-                } catch (err) {
-                    setError(err instanceof Error ? err.message : String(err));
-                    setStep('ERROR');
-                }
-            };
-            download();
+        switch (screen) {
+            case 'INIT':
+                return <Init onDone={handleInitDone} onExit={exit} onStatusChange={setInitStatus} />;
+            case 'MAIN_MENU':
+                return <MainMenu onSelect={handleMenuSelect} onExit={exit} />;
+            case 'CASE_1':
+                return <CasePatchFailed installPath={installPath} onGoBack={() => setScreen('MAIN_MENU')} onExit={exit} />;
+            case 'CASE_2':
+                return <CaseExecuteFailed installPath={installPath} onGoBack={() => setScreen('MAIN_MENU')} onExit={exit} />;
+            case 'CASE_3':
+                return <CaseCrashing onGoBack={() => setScreen('MAIN_MENU')} />;
+            case 'CASE_0':
+                return <CaseReportIssue onGoBack={() => setScreen('MAIN_MENU')} />;
+            default:
+                return null;
         }
-    }, [step, logResult, installPath]);
-
-    // ... (Render logic) ...
-
+    };
 
     return (
-        <Box flexDirection="column" padding={1}>
-            <Text bold color="yellow">POE2 KG Client Patch Butler</Text>
-            <Box marginBottom={1} />
-
-            {step === 'INIT' && <Text>초기화 중...</Text>}
-
-            {step === 'CONFIRM_PATH' && (
-                <Box flexDirection="column">
-                    <Text>설치 경로를 찾았습니다: <Text color="green">{installPath}</Text></Text>
-                    <Text>이 경로가 맞으면 <Text bold color="cyan">Enter</Text>, 수정하려면 <Text bold color="cyan">E</Text>, 종료하려면 <Text bold color="cyan">Q</Text>를 누르세요.</Text>
+        <Box flexDirection="column" padding={1} minHeight={stdout?.rows}>
+            {/* Header */}
+            <Box flexDirection="column" marginBottom={1}>
+                <Text color="yellow">POE2 카카오게임즈 클라이언트 오류 해결 마법사 v{appVersion}</Text>
+                <Box borderStyle="single" borderColor="red" paddingX={1} flexDirection="column">
+                    <Text color="red">카카오야 제발 일해라</Text>
+                    <Text>POE2 카카오게임즈 클라이언트 정상화 기원 <Text bold color="red">최초 발생일로 부터 {getDayCount()}일차</Text></Text>
                 </Box>
-            )}
+            </Box>
 
-            {step === 'INPUT_PATH' && (
-                <PathInput
-                    initialPath={installPath}
-                    onSubmit={(path) => {
-                        setAndSavePath(path);
-                        setStep('CONFIRM_PATH');
-                    }}
-                />
-            )}
+            {/* Body */}
+            <Box flexDirection="column" flexGrow={1}>
+                {renderBody()}
+            </Box>
 
-            {step === 'ANALYZING' && <Text>로그 분석 중...</Text>}
+            {/* Footer */}
+            <Box marginTop={1} flexDirection="column">
+                {updateInfo && !isUpdating ? (
+                    <AutoDetectNotice isEnabled={isAutoDetectEnabled} showMsg={showAutoDetectMsg} baseColor="green" />
+                ) : (
+                    <AutoDetectNotice isEnabled={isAutoDetectEnabled} showMsg={showAutoDetectMsg} baseColor="gray" />
+                )}
 
-            {step === 'CONFIRM_FORCE' && (
-                <Box flexDirection="column">
-                    <Text color="green">최근 로그에서 패치 오류가 발견되지 않았습니다.</Text>
-                    <Text color="gray">런처가 실행되지 않고 종료되는 등의 증상에 권장 드립니다.</Text>
-                    <Box marginBottom={1} />
-                    <Text>핵심 파일들을 강제로 패치하려면 <Text bold color="red">F</Text>를 누르세요. (현재 버전: <Text color="yellow">{extractVersion(logResult ? logResult.webRoot : null) || 'Unknown'}</Text>)</Text>
-                    <Text>종료하려면 <Text bold color="cyan">Enter</Text>를 누르세요.</Text>
+                {updateInfo ? (
+                    <Text color={screen === 'INIT' && initStatus === 'INPUT' ? 'gray' : 'green'}>
+                        새 업데이트가 있습니다! [{appVersion} {'->'} {updateInfo.version}]
+                        {screen === 'MAIN_MENU' || (screen === 'INIT' && initStatus === 'CONFIRM')
+                            ? <Text> 업데이트 하려면 <Text bold color="yellow">U</Text>를 눌러주세요</Text>
+                            : (screen === 'INIT' && initStatus === 'INPUT'
+                                ? <Text> (설치경로 수정중)</Text>
+                                : <Text> (메인메뉴에서 업데이트 가능)</Text>
+                            )
+                        }
+                    </Text>
+                ) : (
+                    !isUpdating && (
+                        <Text color="gray">
+                            패치노트를 확인 하려면 <Text bold color="yellow">P</Text>를 눌러주세요
+                        </Text>
+                    )
+                )}
+                <Box marginTop={0}>
+                    <Text color="gray">powered by NERDHEAD ( https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler )</Text>
                 </Box>
-            )}
-
-            {step === 'READY_TO_DOWNLOAD' && logResult && (
-                <Box flexDirection="column">
-                    <Text color="green">분석 완료!</Text>
-                    <Text>오류 발생 버전: <Text bold color="red">{extractVersion(logResult.webRoot) || 'Unknown'}</Text></Text>
-                    <Text>감지된 누락 파일: <Text bold color="yellow">{logResult.filesToDownload.length}개</Text></Text>
-                    <Box marginLeft={2} flexDirection="column" marginBottom={1}>
-                        {logResult.filesToDownload.map((file, index) => (
-                            <Text key={index}> - {file}</Text>
-                        ))}
-                    </Box>
-                    <Text>다운로드 URL (Web Root): <Text color="blue">{logResult.webRoot}</Text></Text>
-                    <Box marginBottom={1} />
-                    <Text>다운로드를 시작하려면 <Text bold color="cyan">Enter</Text></Text>
-                    <Text>버전(URL)을 수정하려면 <Text bold color="cyan">E</Text></Text>
-                    <Text>종료하려면 <Text bold color="cyan">Q</Text></Text>
-                </Box>
-            )}
-
-            {step === 'EDIT_WEBROOT' && (
-                <Box flexDirection="column">
-                    <Text>Web Root URL 수정:</Text>
-                    <PathInput
-                        initialPath={editWebRoot}
-                        onSubmit={(newUrl) => {
-                            setLogResult(prev => prev ? { ...prev, webRoot: newUrl, backupWebRoot: newUrl } : null);
-                            setStep('READY_TO_DOWNLOAD');
-                        }}
-                    />
-                </Box>
-            )}
-
-            {step === 'DOWNLOADING' && (
-                <Box flexDirection="column">
-                    <Text>파일 다운로드 및 설치 중...</Text>
-                    {logResult?.filesToDownload.map(file => {
-                        const state = fileStates[file] || { status: 'waiting', progress: 0 };
-                        return (
-                            <ProgressBar
-                                key={file}
-                                fileName={file}
-                                percentage={state.progress}
-                                status={state.status}
-                            />
-                        );
-                    })}
-                </Box>
-            )}
-
-            {step === 'DONE' && (
-                <Box flexDirection="column">
-                    {(!logResult || !logResult.hasError) ? (
-                        <Text color="green">최근 로그에서 패치 오류가 발견되지 않았습니다.</Text>
-                    ) : (
-                        <Box flexDirection="column">
-                            {downloadResult && downloadResult.success ? (
-                                <Text color="green">모든 파일 다운로드가 완료되었습니다! 홈페이지에서 다시 실행해주세요.</Text>
-                            ) : (
-                                <Box flexDirection="column">
-                                    <Text color="red">다운로드 실패!</Text>
-                                    <Text>일부 파일을 다운로드하지 못했습니다. 아래 내역을 확인하세요.</Text>
-                                    <Box marginTop={1} marginBottom={1} borderStyle="single" borderColor="red" padding={1}>
-                                        {downloadResult?.failures.map((fail, idx) => (
-                                            <Box key={idx} flexDirection="column">
-                                                <Text bold color="red">{fail.fileName}</Text>
-                                                <Text>{fail.error.message}</Text>
-                                            </Box>
-                                        ))}
-                                    </Box>
-                                    {downloadResult?.failures.some(f => f.error.message.includes('404')) && (
-                                        <Text color="yellow">
-                                            [안내] 404 오류가 지속되면 카카오 게임즈 서버에서 요청을 일시 차단했을 수 있습니다.
-                                            잠시 후 다시 시도하거나, 로그에 기록된 URL이 유효한지 확인해주세요.
-                                            홈페이지에서 런처를 실행 후 도구를 다시 실행 할 경우 정상적으로 작동 할 수 있습니다.
-                                        </Text>
-                                    )}
-                                    <Text color="gray">안전을 위해 실패 시 어떤 파일도 덮어쓰지 않았습니다.</Text>
-                                </Box>
-                            )}
-                        </Box>
-                    )}
-                    <Box marginTop={1} flexDirection="column">
-                        {cleanupStatus === 'pending' && (
-                            <Text color="cyan">임시 폴더(.patch_temp)와 다운로드된 파일을 삭제하시겠습니까? (Enter: 삭제 / Q: 보존)</Text>
-                        )}
-                        {cleanupStatus === 'cleaning' && <Text color="yellow">청소 중...</Text>}
-                        {cleanupStatus === 'done' && (
-                            <Box flexDirection="column">
-                                <Text color="green">임시 폴더가 삭제되었습니다.</Text>
-                                <Text>종료하려면 아무 키나 누르세요.</Text>
-                            </Box>
-                        )}
-                        {cleanupStatus === 'kept' && (
-                            <Box flexDirection="column">
-                                <Text color="gray">임시 폴더가 보존되었습니다. ({path.join(installPath, '.patch_temp')})</Text>
-                                <Text>종료하려면 아무 키나 누르세요.</Text>
-                            </Box>
-                        )}
-                    </Box>
-                </Box>
-            )}
-
-            {step === 'ERROR' && (
-                <Box flexDirection="column">
-                    <Text color="red">오류 발생: {error}</Text>
-                    <Text>종료하려면 아무 키나 누르세요.</Text>
-                </Box>
-            )}
+            </Box>
         </Box>
     );
 };

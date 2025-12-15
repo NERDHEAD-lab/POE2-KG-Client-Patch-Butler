@@ -15,8 +15,7 @@ export async function getInstallPath(): Promise<string | null> {
 
         regKey.get(REGISTRY_VALUE, (err: Error | null, item: Winreg.RegistryItem) => {
             if (err) {
-                // If key not found or other error, return null to indicate failure
-                // We might want to log this in verbose mode
+                // 키를 찾지 못하거나 에러 발생 시 null 반환
                 resolve(null);
             } else {
                 resolve(item ? item.value : null);

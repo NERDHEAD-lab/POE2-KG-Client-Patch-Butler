@@ -31,6 +31,9 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
+      - name: Install Inno Setup
+        run: choco install innosetup
+
       # change these commands to build your project
       - name: Build and package
         if: ${{ steps.release.outputs.release_created }}
@@ -43,7 +46,9 @@ jobs:
         uses: softprops/action-gh-release@v1
         if: ${{ steps.release.outputs.release_created }}
         with:
-          files: poe2-patch-butler.exe
+          files: |
+            poe2-patch-butler.exe
+            dist/poe2-patch-butler-setup.exe
           tag_name: ${{ steps.release.outputs.tag_name }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

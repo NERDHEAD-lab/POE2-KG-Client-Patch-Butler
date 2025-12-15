@@ -17,7 +17,7 @@ export interface FileStatus {
 
 export type StatusCallback = (status: FileStatus) => void;
 
-async function downloadFile(
+export async function downloadFile(
     url: string,
     destPath: string,
     fileName: string,
@@ -51,7 +51,7 @@ async function downloadFile(
                 url,
                 method: 'GET',
                 responseType: 'stream',
-                timeout: 30000, // 30s timeout
+                timeout: 30000, // 30초 타임아웃
                 headers: {
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                     'Connection': 'keep-alive',
@@ -85,7 +85,7 @@ async function downloadFile(
                     resolve(null);
                 });
                 writer.on('error', (err) => reject(new Error(`File write error: ${err.message}`)));
-                response.data.on('error', (err) => reject(new Error(`Stream error: ${err.message}`)));
+                response.data.on('error', (err: any) => reject(new Error(`Stream error: ${err.message}`)));
             });
 
             return; // Success, exit function
@@ -191,7 +191,7 @@ export async function downloadFiles(
             return { success: false, failures };
         }
 
-        // Move files from temp to installPath
+        // 임시 폴더에서 설치 경로로 이동
         for (const file of files) {
             const tempPath = path.join(tempDir, file);
             const finalPath = path.join(installPath, file);

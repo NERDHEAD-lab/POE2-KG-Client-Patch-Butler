@@ -1,5 +1,5 @@
 {
-    "name": "poe2-kg-client-patch-butler",
+    "name": "poe2-patch-butler",
     "version": "1.1.0",
     "description": "Helper tool for Kakao Games POE2 client patching",
     "main": "dist/cli.js",
@@ -24,20 +24,24 @@
     "author": "NERDHEAD Lab",
     "license": "MIT",
     "dependencies": {
+        "@types/semver": "^7.7.1",
         "axios": "^1.7.9",
         "conf": "^10.2.0",
         "ink": "^5.0.0",
         "ink-text-input": "^6.0.0",
-        "meow": "^13.0.0",
+        "meow": "^13.2.0",
         "react": "^18.2.0",
+        "semver": "^7.7.3",
         "winreg": "^1.2.4"
     },
     "devDependencies": {
         "@types/node": "^20.10.4",
         "@types/react": "^18.2.43",
         "@types/winreg": "^1.2.36",
+        "innosetup-compiler": "^6.3.1",
         "postject": "^1.0.0-alpha.6",
         "react-devtools-core": "^4.28.5",
+        "resedit-cli": "^3.0.1",
         "ts-node": "^10.9.1",
         "tsup": "^8.0.0",
         "typescript": "^5.3.3"

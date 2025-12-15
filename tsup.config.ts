@@ -1,4 +1,7 @@
 import { defineConfig } from 'tsup';
+import { readFileSync } from 'fs';
+
+const packageJson = JSON.parse(readFileSync('./package.json', 'utf-8'));
 
 export default defineConfig({
     entry: ['src/cli.tsx'],
@@ -19,6 +22,7 @@ export default defineConfig({
         js: `import { createRequire } from 'module';const require = createRequire(import.meta.url);`,
     },
     define: {
-        'process.env.DEV': '"false"'
+        'process.env.DEV': '"false"',
+        'process.env.APP_VERSION': `"${packageJson.version}"`
     }
 });
