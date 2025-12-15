@@ -115,6 +115,31 @@ process.on('exit', () => {
         console.log('--- Build Complete ---');
         console.log(`Executable created at: ${exePath}`);
 
+        // 7. Create Installer (Optional)
+        // Check if innosetup-compiler is available
+        try {
+            console.log('--- Creating Installer ---');
+            const innosetupCompiler = require('innosetup-compiler');
+            const issPath = path.resolve(rootDir, 'scripts', 'installer.iss');
+
+            await new Promise((resolve, reject) => {
+                innosetupCompiler(issPath, {
+                    gui: false,
+                    verbose: true,
+                }, (error) => {
+                    if (error) {
+                        reject(error);
+                    } else {
+                        resolve();
+                    }
+                });
+            });
+            console.log('Installer created successfully!');
+        } catch (e) {
+            console.warn('Failed to create installer (Inno Setup might not be installed or configured):', e.message);
+            console.log('Skipping installer creation.');
+        }
+
     } catch (error) {
         console.error('Build failed:', error);
         process.exit(1);
