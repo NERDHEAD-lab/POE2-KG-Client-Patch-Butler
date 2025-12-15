@@ -5,6 +5,7 @@ import MainMenu from './MainMenu.js';
 import CasePatchFailed from './Menu/CasePatchFailed.js';
 import CaseExecuteFailed from './Menu/CaseExecuteFailed.js';
 import CaseCrashing from './Menu/CaseCrashing.js';
+import CaseReportIssue from './Menu/CaseReportIssue.js';
 import { getAppVersion } from '../utils/version.js';
 import { checkForUpdate } from '../utils/updater.js';
 import { performSelfUpdate } from '../utils/selfUpdate.js';
@@ -109,17 +110,7 @@ const App: React.FC = () => {
             case 'CASE_3':
                 return <CaseCrashing onGoBack={() => setScreen('MAIN_MENU')} />;
             case 'CASE_0':
-                return (
-                    <Box flexDirection="column">
-                        <Text>브라우저에서 GitHub Issues 페이지를 엽니다...</Text>
-                        <Text color="blue" underline>https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/issues</Text>
-                        {/* URL 자동 열기 */}
-                        <Case0Opener
-                            onExit={() => { }}
-                            onGoBack={() => setScreen('MAIN_MENU')}
-                        />
-                    </Box>
-                );
+                return <CaseReportIssue onGoBack={() => setScreen('MAIN_MENU')} />;
             default:
                 return null;
         }
@@ -157,25 +148,6 @@ const App: React.FC = () => {
                 )}
                 <Text color="gray">powered by NERDHEAD ( https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler )</Text>
             </Box>
-        </Box>
-    );
-};
-
-const Case0Opener: React.FC<{ onExit: () => void, onGoBack: () => void }> = ({ onGoBack }) => {
-    // Open URL once when mounted
-    React.useEffect(() => {
-        const url = 'https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/issues';
-        const start = (process.platform == 'darwin' ? 'open' : process.platform == 'win32' ? 'start' : 'xdg-open');
-        import('child_process').then(cp => {
-            cp.spawn('cmd', ['/c', 'start', url], { windowsVerbatimArguments: true });
-        });
-    }, []);
-
-    useInput(() => onGoBack());
-
-    return (
-        <Box marginTop={1}>
-            <Text>(초기 메뉴로 돌아가려면 아무 키나 누르세요)</Text>
         </Box>
     );
 };
