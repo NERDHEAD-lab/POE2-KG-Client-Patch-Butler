@@ -17,7 +17,7 @@ export interface FileStatus {
 
 export type StatusCallback = (status: FileStatus) => void;
 
-async function downloadFile(
+export async function downloadFile(
     url: string,
     destPath: string,
     fileName: string,
