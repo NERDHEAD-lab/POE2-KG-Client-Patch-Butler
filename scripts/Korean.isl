@@ -218,7 +218,7 @@ ReadyMemoGroup=시작 메뉴 폴더:
 ReadyMemoTasks=추가 작업:
 
 ; *** TDownloadWizardPage wizard page and DownloadTemporaryFile
-DownloadingLabel2=파일 다운로드 중...
+DownloadingLabel=파일 다운로드 중...
 ButtonStopDownload=다운로드 중지(&S)
 StopDownload=다운로드를 중지하시겠습니까?
 ErrorDownloadAborted=다운로드가 중단되었습니다
@@ -228,16 +228,16 @@ ErrorProgress=잘못된 진행 상황: %1 / %2
 ErrorFileSize=잘못된 파일 크기: %1 예상, %2 찾음
 
 ; *** TExtractionWizardPage wizard page and ExtractArchive
-ExtractingLabel=파일을 추출하는 중...
-ButtonStopExtraction=추출 중지(&S)
-StopExtraction=추출을 중지하시겠습니까?
-ErrorExtractionAborted=추출이 중단되었습니다
-ErrorExtractionFailed=추출 실패: %1
+; ExtractingLabel=파일을 추출하는 중...
+; ButtonStopExtraction=추출 중지(&S)
+; StopExtraction=추출을 중지하시겠습니까?
+; ErrorExtractionAborted=추출이 중단되었습니다
+; ErrorExtractionFailed=추출 실패: %1
 
 ; *** Archive extraction failure details
-ArchiveIncorrectPassword=암호가 잘못되었습니다
-ArchiveIsCorrupted=압축파일이 손상되었습니다
-ArchiveUnsupportedFormat=압축파일 형식이 지원되지 않습니다
+; ArchiveIncorrectPassword=암호가 잘못되었습니다
+; ArchiveIsCorrupted=압축파일이 손상되었습니다
+; ArchiveUnsupportedFormat=압축파일 형식이 지원되지 않습니다
 
 ; *** "Preparing to Install" wizard page
 WizardPreparing=설치 준비 중
@@ -283,15 +283,15 @@ AbortRetryIgnoreSelectAction=작업 선택
 AbortRetryIgnoreRetry=재시도(&T)
 AbortRetryIgnoreIgnore=오류를 무시하고 진행(&I)
 AbortRetryIgnoreCancel=설치 취소
-RetryCancelSelectAction=작업 선택
-RetryCancelRetry=재시도(&T)
-RetryCancelCancel=취소
+; RetryCancelSelectAction=작업 선택
+; RetryCancelRetry=재시도(&T)
+; RetryCancelCancel=취소
 
 ; *** Installation status messages
 StatusClosingApplications=응용 프로그램을 닫는 중...
 StatusCreateDirs=디렉터리를 만드는 중...
 StatusExtractFiles=파일을 추출하는 중...
-StatusDownloadFiles=파일을 다운로드하는 중...
+; StatusDownloadFiles=파일을 다운로드하는 중...
 StatusCreateIcons=바로 가기를 만드는 중...
 StatusCreateIniEntries=INI 항목을 만드는 중...
 StatusCreateRegistryEntries=레지스트리 항목을 만드는 중...
@@ -321,14 +321,18 @@ FileAbortRetryIgnoreSkipNotRecommended=이 파일 건너뛰기 (권장하지 않
 FileAbortRetryIgnoreIgnoreNotRecommended=오류를 무시하고 계속 (권장하지 않음)(&I)
 SourceIsCorrupted=원본 파일이 손상되었습니다
 SourceDoesntExist=원본 파일 "%1"이(가) 없습니다
-SourceVerificationFailed=소스 파일 검증 실패: %1
-VerificationSignatureDoesntExist=서명 파일 "%1"이 존재하지 않습니다
-VerificationSignatureInvalid=서명 파일 "%1"이 잘못되었습니다
-VerificationKeyNotFound=서명 파일 "%1"이 알 수 없는 키를 사용합니다
-VerificationFileNameIncorrect=파일 이름이 잘못되었습니다
-VerificationFileTagIncorrect=파일의 태그가 잘못되었습니다
-VerificationFileSizeIncorrect=파일 크기가 잘못되었습니다
-VerificationFileHashIncorrect=파일의 해시가 잘못되었습니다
+; SourceVerificationFailed=소스 파일 검증 실패: %1
+; VerificationSignatureDoesntExist=서명 파일 "%1"이 존재하지 않습니다
+; VerificationSignatureInvalid=서명 파일 "%1"이 잘못되었습니다
+; VerificationKeyNotFound=서명 파일 "%1"이 알 수 없는 키를 사용합니다
+; VerificationFileNameIncorrect=파일 이름이 잘못되었습니다
+; VerificationFileTagIncorrect=파일의 태그가 잘못되었습니다
+; VerificationFileSizeIncorrect=파일 크기가 잘못되었습니다
+; VerificationFileTagIncorrect=파일의 태그가 잘못되었습니다
+; VerificationFileSizeIncorrect=파일 크기가 잘못되었습니다
+; VerificationFileHashIncorrect=파일의 해시가 잘못되었습니다
+ErrorFileHash1=파일 해시 실패: %1
+ErrorFileHash2=파일 해시 실패: 예상 %1, 찾음 %2
 ExistingFileReadOnly2=읽기 전용으로 표시되어 있으므로 기존 파일을 교체할 수 없습니다.
 ExistingFileReadOnlyRetry=읽기 전용 속성을 제거하고 다시 시도(&R)
 ExistingFileReadOnlyKeepExisting=기존 파일 유지(&K)
@@ -347,8 +351,8 @@ ErrorChangingAttr=기존 파일의 속성을 변경하는 동안 오류 발생:
 ErrorCreatingTemp=대상 디렉터리에 파일을 만드는 동안 오류 발생:
 ErrorReadingSource=원본 파일을 읽는 동안 오류 발생:
 ErrorCopying=파일을 복사하는 동안 오류 발생:
-ErrorDownloading=파일을 다운로드하는 동안 오류 발생:
-ErrorExtracting=압축파일을 추출하는 동안 오류 발생:
+; ErrorDownloading=파일을 다운로드하는 동안 오류 발생:
+; ErrorExtracting=압축파일을 추출하는 동안 오류 발생:
 ErrorReplacingExistingFile=기존 파일을 교체하는 동안 오류 발생:
 ErrorRestartReplace=RestartReplace 실패:
 ErrorRenamingTemp=대상 디렉터리 내의 파일 이름을 바꾸는 동안 오류 발생:
