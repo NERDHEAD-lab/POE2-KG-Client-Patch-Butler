@@ -5,7 +5,7 @@ const execAsync = promisify(exec);
 
 export const isProcessRunning = async (processName: string): Promise<boolean> => {
     try {
-        const { stdout } = await execAsync(`tasklist /FI "IMAGENAME eq ${processName}" /FO CSV /NH`);
+        const { stdout } = await execAsync(`tasklist /FI "IMAGENAME eq ${processName}" /FO CSV /NH`, { windowsHide: true });
         // If the process is running, stdout will contain the process name.
         // If not running, it might return "INFO: No tasks are running..." or just empty depending on localization/system.
         // But reliably, if it contains the process name in quotes, it's running.

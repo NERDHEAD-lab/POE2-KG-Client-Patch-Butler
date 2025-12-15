@@ -3,23 +3,32 @@ import React from 'react';
 import { render } from 'ink';
 import meow from 'meow';
 import App from './ui/App.js';
+import { startWatcher } from './watcher.js';
 
 const cli = meow(`
 	Usage
 	  $ poe2-patch-butler
 
 	Options
-	  --name  Your name
+	  --watch      Start in background watcher mode
+      --fix-patch  Start directly in Patch Fix mode
 
 	Examples
-	  $ poe2-patch-butler
+	  $ poe2-patch-butler --watch
 `, {
 	flags: {
-		name: {
-			type: 'string'
+		watch: {
+			type: 'boolean'
+		},
+		fixPatch: {
+			type: 'boolean'
 		}
 	},
 	importMeta: import.meta,
 });
 
-render(<App />);
+if (cli.flags.watch) {
+	startWatcher();
+} else {
+	render(<App initialMode={cli.flags.fixPatch ? 'FIX_PATCH' : 'NORMAL'} />);
+}

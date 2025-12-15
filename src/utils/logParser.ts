@@ -116,3 +116,21 @@ export function generateForcePatchResult(baseResult: LogParseResult): LogParseRe
         hasError: true
     };
 }
+
+// Wrapper for watcher
+import { getLastInstallPath } from './config.js';
+import { getInstallPath } from './registry.js';
+
+export async function checkLogForErrors(): Promise<LogParseResult> {
+    const configPath = getLastInstallPath();
+    if (configPath) {
+        return parseLog(configPath);
+    }
+
+    const regPath = await getInstallPath();
+    if (regPath) {
+        return parseLog(regPath);
+    }
+
+    throw new Error('Install path not found');
+}

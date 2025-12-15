@@ -6,6 +6,7 @@ import CasePatchFailed from './Menu/CasePatchFailed.js';
 import CaseExecuteFailed from './Menu/CaseExecuteFailed.js';
 import CaseCrashing from './Menu/CaseCrashing.js';
 import CaseReportIssue from './Menu/CaseReportIssue.js';
+import AutoDetectNotice from './AutoDetectNotice.js';
 import { getAppVersion } from '../utils/version.js';
 import { checkForUpdate } from '../utils/updater.js';
 import { performSelfUpdate } from '../utils/selfUpdate.js';
@@ -16,16 +17,35 @@ import os from 'os';
 
 type Screen = 'INIT' | 'MAIN_MENU' | 'CASE_1' | 'CASE_2' | 'CASE_3' | 'CASE_0';
 
-const App: React.FC = () => {
+interface AppProps {
+    initialMode?: 'NORMAL' | 'FIX_PATCH';
+}
+
+const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
     const { exit } = useApp();
     const { stdout } = useStdout();
+
+    // Always start at INIT to ensure installPath is loaded context correctly
     const [screen, setScreen] = useState<Screen>('INIT');
     const [installPath, setInstallPath] = useState('');
     const [appVersion, setAppVersion] = useState(getAppVersion());
+
+
+
+    const handleInitDone = (path: string, version: string) => {
+        setInstallPath(path);
+        setAppVersion(version);
+
+        if (initialMode === 'FIX_PATCH') {
+            setScreen('CASE_1');
+        } else {
+            setScreen('MAIN_MENU');
+        }
+    };
     const [updateInfo, setUpdateInfo] = useState<{ url: string, version: string } | null>(null);
     const [isUpdating, setIsUpdating] = useState(false);
     const [downloadProgress, setDownloadProgress] = useState(0);
-    const [initStatus, setInitStatus] = useState<'LOADING' | 'CONFIRM' | 'INPUT' | null>(null);
+    const [initStatus, setInitStatus] = useState<'LOADING' | 'PROCESS_CHECK' | 'CONFIRM' | 'INPUT' | null>(null);
 
     React.useEffect(() => {
         if (process.env.NODE_ENV !== 'development') {
@@ -63,6 +83,62 @@ const App: React.FC = () => {
         spawn('cmd', ['/c', 'start', url], { windowsVerbatimArguments: true });
     };
 
+    // Auto-detect toggle
+    const [isAutoDetectEnabled, setIsAutoDetectEnabled] = useState(false);
+    const [showAutoDetectMsg, setShowAutoDetectMsg] = useState(false);
+
+    React.useEffect(() => {
+        const checkRegistry = async () => {
+            try {
+                const { exec } = await import('child_process');
+                exec('reg query "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" /v "POE2_Patch_Butler_Watch"', (err) => {
+                    setIsAutoDetectEnabled(!err);
+                });
+            } catch (e) { }
+        };
+        checkRegistry();
+    }, []);
+
+    const toggleAutoDetect = async () => {
+        const { exec } = await import('child_process');
+        const exePath = process.execPath;
+
+        if (isAutoDetectEnabled) {
+            // Turning OFF
+            // 1. Remove from registry (ignore error if key doesn't exist)
+            exec('reg delete "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" /v "POE2_Patch_Butler_Watch" /f', () => {
+                // Always proceed to update state and kill process
+                setIsAutoDetectEnabled(false);
+                setShowAutoDetectMsg(true);
+                setTimeout(() => setShowAutoDetectMsg(false), 3000);
+
+                // 2. Kill running watcher process FORCEFULLY
+                const currentExeName = path.basename(process.execPath);
+                // Use Stop-Process -Force to ensure termination
+                const psCommand = `Get-CimInstance Win32_Process | Where-Object { $_.Name -eq '${currentExeName}' -and $_.CommandLine -like '*--watch*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }`;
+                exec(`powershell -Command "${psCommand}"`, { windowsHide: true }, () => { });
+            });
+        } else {
+            // Add to registry
+            const command = `\\"${exePath}\\" --watch`;
+            exec(`reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" /v "POE2_Patch_Butler_Watch" /t REG_SZ /d "${command}" /f`, (err) => {
+                if (!err) {
+                    setIsAutoDetectEnabled(true);
+                    setShowAutoDetectMsg(true);
+                    setTimeout(() => setShowAutoDetectMsg(false), 3000);
+
+                    // Start watcher process immediately
+                    // Use subprocess to detach
+                    spawn(exePath, ['--watch'], {
+                        detached: true,
+                        stdio: 'ignore',
+                        windowsHide: true
+                    }).unref();
+                }
+            });
+        }
+    };
+
     useInput((input, key) => {
         const isNotInputMode = screen === 'MAIN_MENU' || (screen === 'INIT' && initStatus !== 'INPUT');
 
@@ -72,6 +148,9 @@ const App: React.FC = () => {
             }
             if (input === 'p' || input === 'P') {
                 handleOpenPatchNotes();
+            }
+            if (input === 'a' || input === 'A') {
+                toggleAutoDetect();
             }
         }
     });
@@ -86,11 +165,7 @@ const App: React.FC = () => {
         return diffDays + 1; // 1일차 시작
     };
 
-    const handleInitDone = (path: string, version: string) => {
-        setInstallPath(path);
-        setAppVersion(version);
-        setScreen('MAIN_MENU');
-    };
+
 
     const handleMenuSelect = (option: number) => {
         switch (option) {
@@ -148,6 +223,12 @@ const App: React.FC = () => {
             {/* Footer */}
             <Box marginTop={1} flexDirection="column">
                 {updateInfo && !isUpdating ? (
+                    <AutoDetectNotice isEnabled={isAutoDetectEnabled} showMsg={showAutoDetectMsg} baseColor="green" />
+                ) : (
+                    <AutoDetectNotice isEnabled={isAutoDetectEnabled} showMsg={showAutoDetectMsg} baseColor="gray" />
+                )}
+
+                {updateInfo ? (
                     <Text color={screen === 'INIT' && initStatus === 'INPUT' ? 'gray' : 'green'}>
                         새 업데이트가 있습니다! [{appVersion} {'->'} {updateInfo.version}]
                         {screen === 'MAIN_MENU' || (screen === 'INIT' && initStatus === 'CONFIRM')
@@ -165,7 +246,9 @@ const App: React.FC = () => {
                         </Text>
                     )
                 )}
-                <Text color="gray">powered by NERDHEAD ( https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler )</Text>
+                <Box marginTop={0}>
+                    <Text color="gray">powered by NERDHEAD ( https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler )</Text>
+                </Box>
             </Box>
         </Box>
     );
