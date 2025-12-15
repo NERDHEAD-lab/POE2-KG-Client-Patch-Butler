@@ -85,7 +85,7 @@ async function downloadFile(
                     resolve(null);
                 });
                 writer.on('error', (err) => reject(new Error(`File write error: ${err.message}`)));
-                response.data.on('error', (err) => reject(new Error(`Stream error: ${err.message}`)));
+                response.data.on('error', (err: any) => reject(new Error(`Stream error: ${err.message}`)));
             });
 
             return; // Success, exit function
