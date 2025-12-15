@@ -230,19 +230,19 @@ const CasePatchFailed: React.FC<CasePatchFailedProps> = ({ installPath, onGoBack
                     )}
                     <Box marginTop={1} flexDirection="column">
                         {cleanupStatus === 'pending' && (
-                            <Text color="cyan">임시 폴더(.patch_temp)와 다운로드된 파일을 삭제하시겠습니까? (Enter: 삭제 / Q: 보존)</Text>
+                            <Text color="cyan">임시 폴더(.patch_temp)와 다운로드된 파일을 삭제하시겠습니까? (<Text bold color="yellow">Enter</Text>: 삭제 / <Text bold color="yellow">Q</Text>: 보존)</Text>
                         )}
                         {cleanupStatus === 'cleaning' && <Text color="yellow">청소 중...</Text>}
                         {cleanupStatus === 'done' && (
                             <Box flexDirection="column">
                                 <Text color="green">임시 폴더가 삭제되었습니다.</Text>
-                                <Text>초기 메뉴로 돌아가려면 아무 키나 누르세요.</Text>
+                                <Text>초기 메뉴로 돌아가려면 <Text bold color="cyan">아무 키</Text>나 누르세요.</Text>
                             </Box>
                         )}
                         {cleanupStatus === 'kept' && (
                             <Box flexDirection="column">
                                 <Text color="gray">임시 폴더가 보존되었습니다. ({path.join(installPath, '.patch_temp')})</Text>
-                                <Text>초기 메뉴로 돌아가려면 아무 키나 누르세요.</Text>
+                                <Text>초기 메뉴로 돌아가려면 <Text bold color="cyan">아무 키</Text>나 누르세요.</Text>
                             </Box>
                         )}
                     </Box>
@@ -252,7 +252,7 @@ const CasePatchFailed: React.FC<CasePatchFailedProps> = ({ installPath, onGoBack
             {step === 'ERROR' && (
                 <Box flexDirection="column">
                     <Text color="red">오류 발생: {error}</Text>
-                    <Text>초기 메뉴로 돌아가려면 아무 키나 누르세요.</Text>
+                    <Text>초기 메뉴로 돌아가려면 <Text bold color="cyan">아무 키</Text>나 누르세요.</Text>
                 </Box>
             )}
         </Box>

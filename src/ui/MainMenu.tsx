@@ -41,7 +41,7 @@ const MainMenu: React.FC<MainMenuProps> = ({ onSelect, onExit }) => {
 
     return (
         <Box flexDirection="column">
-            <Text>현재 증상을 선택하세요. (위, 아래 방향키로 이동 및 Enter 혹은 숫자로 선택, 종료하려면 Q를 누르세요)</Text>
+            <Text>현재 증상을 선택하세요. (<Text bold color="cyan">위, 아래 방향키</Text>로 이동 및 <Text bold color="cyan">Enter</Text> 혹은 <Text bold color="cyan">숫자</Text>로 선택, 종료하려면 <Text bold color="cyan">Q</Text>를 누르세요)</Text>
             <Box marginBottom={1} />
 
             {options.map((opt, idx) => (

@@ -26,7 +26,7 @@ const CaseCrashing: React.FC<CaseCrashingProps> = ({ onGoBack }) => {
                 <Text>3. <Text color="yellow">dism /online /cleanup-image /restorehealth</Text> 실행</Text>
             </Box>
             <Box marginBottom={1} />
-            <Text>(초기 메뉴로 돌아가려면 아무 키나 누르세요)</Text>
+            <Text>(초기 메뉴로 돌아가려면 <Text bold color="cyan">아무 키</Text>나 누르세요)</Text>
         </Box>
     );
 };
