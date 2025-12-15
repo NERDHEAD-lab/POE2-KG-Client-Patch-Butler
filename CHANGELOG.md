@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/compare/1.2.0...1.2.1) (2025-12-15)
+
+
+### Bug Fixes
+
+* 최신 업데이트 감지 및 업데이트 기능 찐빠 수정 ([ca6d182](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/ca6d182e25da50baebbd30b1456dfe5d391bba61))
+
 ## [1.2.0](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/compare/1.1.0...1.2.0) (2025-12-15)
 
 
