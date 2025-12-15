@@ -10,6 +10,7 @@ import { getAppVersion } from '../utils/version.js';
 import { checkForUpdate } from '../utils/updater.js';
 import { performSelfUpdate } from '../utils/selfUpdate.js';
 import { downloadFile } from '../utils/downloader.js';
+import { spawn } from 'child_process';
 import path from 'path';
 import os from 'os';
 
@@ -56,10 +57,22 @@ const App: React.FC = () => {
         }
     };
 
+    const handleOpenPatchNotes = () => {
+        const url = 'https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/releases';
+        const start = (process.platform == 'darwin' ? 'open' : process.platform == 'win32' ? 'start' : 'xdg-open');
+        spawn('cmd', ['/c', 'start', url], { windowsVerbatimArguments: true });
+    };
+
     useInput((input, key) => {
-        // Handle update shortcut 'u' only in MAIN_MENU (Init handles its own)
-        if (screen === 'MAIN_MENU' && (input === 'u' || input === 'U')) {
-            handleUpdate();
+        const isNotInputMode = screen === 'MAIN_MENU' || (screen === 'INIT' && initStatus !== 'INPUT');
+
+        if (isNotInputMode) {
+            if (input === 'u' || input === 'U') {
+                handleUpdate();
+            }
+            if (input === 'p' || input === 'P') {
+                handleOpenPatchNotes();
+            }
         }
     });
 
@@ -100,7 +113,7 @@ const App: React.FC = () => {
 
         switch (screen) {
             case 'INIT':
-                return <Init onDone={handleInitDone} onExit={exit} onUpdate={updateInfo ? handleUpdate : undefined} onStatusChange={setInitStatus} />;
+                return <Init onDone={handleInitDone} onExit={exit} onStatusChange={setInitStatus} />;
             case 'MAIN_MENU':
                 return <MainMenu onSelect={handleMenuSelect} onExit={exit} />;
             case 'CASE_1':
@@ -134,7 +147,7 @@ const App: React.FC = () => {
 
             {/* Footer */}
             <Box marginTop={1} flexDirection="column">
-                {updateInfo && !isUpdating && (
+                {updateInfo && !isUpdating ? (
                     <Text color={screen === 'INIT' && initStatus === 'INPUT' ? 'gray' : 'green'}>
                         새 업데이트가 있습니다! [{appVersion} {'->'} {updateInfo.version}]
                         {screen === 'MAIN_MENU' || (screen === 'INIT' && initStatus === 'CONFIRM')
@@ -145,6 +158,12 @@ const App: React.FC = () => {
                             )
                         }
                     </Text>
+                ) : (
+                    !isUpdating && (
+                        <Text color="gray">
+                            패치노트를 확인 하려면 <Text bold color="yellow">P</Text>를 눌러주세요
+                        </Text>
+                    )
                 )}
                 <Text color="gray">powered by NERDHEAD ( https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler )</Text>
             </Box>

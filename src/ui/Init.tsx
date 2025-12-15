@@ -8,11 +8,10 @@ import { PathInput } from './PathInput.js';
 interface InitProps {
     onDone: (installPath: string, version: string) => void;
     onExit: () => void;
-    onUpdate?: () => void;
     onStatusChange?: (status: 'LOADING' | 'CONFIRM' | 'INPUT') => void;
 }
 
-const Init: React.FC<InitProps> = ({ onDone, onExit, onUpdate, onStatusChange }) => {
+const Init: React.FC<InitProps> = ({ onDone, onExit, onStatusChange }) => {
     const [status, setStatus] = useState<'LOADING' | 'CONFIRM' | 'INPUT'>('LOADING');
     const [installPath, setInstallPath] = useState<string>('');
     const [version, setVersion] = useState<string>('Checking...'); // 버전 확인 중
@@ -64,8 +63,6 @@ const Init: React.FC<InitProps> = ({ onDone, onExit, onUpdate, onStatusChange })
                 setStatus('INPUT');
             } else if (input === 'q' || input === 'Q') {
                 onExit();
-            } else if ((input === 'u' || input === 'U') && onUpdate) {
-                onUpdate();
             }
         }
     });
