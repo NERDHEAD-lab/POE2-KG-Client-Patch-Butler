@@ -54,7 +54,7 @@ Kakao Games의 Path of Exile 2 클라이언트 패치 실패 문제를 해결하
 
 ### 요구 사항
 
-- Node.js 18+
+- Node.js 22+
 - npm
 
 ### 설치 및 실행
