@@ -20,8 +20,13 @@ export const getLatestVersionInfo = async (): Promise<LatestVersionInfo | null> 
         const tagName = latestData.tag_name; // e.g., "v1.2.0"
         const cleanLatestVersion = tagName.replace(/^v/, '');
 
-        // Find asset with name ending in .exe
-        const asset = latestData.assets.find((a: any) => a.name.endsWith('.exe'));
+        // Find asset with name ending in .exe but NOT containing 'setup' or 'installer'
+        // Prioritize: poe2-patch-butler.exe
+        const asset = latestData.assets.find((a: any) =>
+            a.name.endsWith('.exe') &&
+            !a.name.toLowerCase().includes('setup') &&
+            !a.name.toLowerCase().includes('installer')
+        );
 
         return {
             version: cleanLatestVersion,
