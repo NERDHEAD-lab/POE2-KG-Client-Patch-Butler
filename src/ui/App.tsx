@@ -58,9 +58,10 @@ const App: React.FC = () => {
                     <Box flexDirection="column">
                         <Text>브라우저에서 GitHub Issues 페이지를 엽니다...</Text>
                         <Text color="blue" underline>https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/issues</Text>
-                        {/* Auto open URL logic */}
+                        <Text color="blue" underline>https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/issues</Text>
+                        {/* URL 자동 열기 */}
                         <Case0Opener
-                            onExit={() => { /* Stay or go back? User said 'Report Issue means just open URL' */ }}
+                            onExit={() => { }}
                             onGoBack={() => setScreen('MAIN_MENU')}
                         />
                     </Box>

@@ -9,9 +9,7 @@ export function runPackCheck(installPath: string): Promise<void> {
             return reject(new Error('PackCheck.exe not found'));
         }
 
-        // Use 'start' to open in a new window.
-        // /wait ensures we wait for it to close.
-        // cmd /c "PackCheck.exe & pause" runs the check and waits for user input before closing.
+        // 새 창에서 열기 위해 'start' 사용
         const child = spawn('cmd', ['/c', 'start', '"PackCheck Integrity Check"', '/wait', 'cmd', '/c', '"PackCheck.exe & pause"'], {
             cwd: installPath,
             stdio: 'ignore',
@@ -22,8 +20,8 @@ export function runPackCheck(installPath: string): Promise<void> {
             if (code === 0) {
                 resolve();
             } else {
-                // PackCheck might return non-zero on error
-                resolve(); // Still resolve as we just want to run it
+                // 에러 발생 시에도 진행
+                resolve();
             }
         });
 

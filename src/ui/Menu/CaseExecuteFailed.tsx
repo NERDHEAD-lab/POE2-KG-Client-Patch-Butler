@@ -33,7 +33,7 @@ const CaseExecuteFailed: React.FC<CaseExecuteFailedProps> = ({ installPath, onGo
     useEffect(() => {
         const init = async () => {
             try {
-                // Step 1 prep
+                // 1단계 준비
                 const result = await parseLog(installPath);
                 setLogResult(result);
                 setStep('STEP1_CONFIRM');
@@ -45,7 +45,7 @@ const CaseExecuteFailed: React.FC<CaseExecuteFailedProps> = ({ installPath, onGo
         init();
     }, [installPath]);
 
-    // Handlers for steps
+    // 단계별 핸들러
     const startForcePatch = async () => {
         if (!logResult || !logResult.webRoot) return;
         setStep('STEP1_DOWNLOADING');
@@ -118,7 +118,7 @@ const CaseExecuteFailed: React.FC<CaseExecuteFailedProps> = ({ installPath, onGo
         try {
             await runPackCheck(installPath);
         } catch (e) {
-            // Ignore error from spawn/close, user sees output
+            // 에러 무시 (사용자가 출력 확인)
         }
         setStep('STEP4_CONFIRM');
     };

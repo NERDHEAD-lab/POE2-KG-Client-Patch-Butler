@@ -9,9 +9,6 @@ const config = new ConfClass({
     schema: {
         lastInstallPath: {
             type: 'string',
-        },
-        cookie: {
-            type: 'string'
         }
     },
 });
@@ -22,12 +19,4 @@ export const getLastInstallPath = (): string | undefined => {
 
 export const setLastInstallPath = (path: string): void => {
     config.set('lastInstallPath', path);
-};
-
-export const getCookie = (): string | undefined => {
-    return config.get('cookie') as string | undefined;
-};
-
-export const setCookie = (cookie: string): void => {
-    config.set('cookie', cookie);
 };

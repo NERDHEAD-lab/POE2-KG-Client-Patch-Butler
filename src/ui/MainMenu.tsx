@@ -7,8 +7,6 @@ interface MainMenuProps {
 }
 
 const MainMenu: React.FC<MainMenuProps> = ({ onSelect, onExit }) => {
-    // Basic navigation logic could be added here (up/down arrow)
-    // For now, implementing simple number input and arrow key navigation
 
     const [selectedIndex, setSelectedIndex] = React.useState(0);
     const options = [

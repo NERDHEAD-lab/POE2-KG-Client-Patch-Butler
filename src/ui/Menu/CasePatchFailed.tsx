@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Text, useInput } from 'ink';
 import { parseLog, LogParseResult, generateForcePatchResult } from '../../utils/logParser.js';
-import { downloadFiles, cleanupTempDir } from '../../utils/downloader.js'; // Adjust path
+import { downloadFiles, cleanupTempDir } from '../../utils/downloader.js';
 import path from 'path';
-import { ProgressBar } from '../ProgressBar.js'; // Adjust path
-import { PathInput } from '../PathInput.js'; // Adjust path
+import { ProgressBar } from '../ProgressBar.js';
+import { PathInput } from '../PathInput.js';
 
 interface CasePatchFailedProps {
     installPath: string;
@@ -108,12 +108,7 @@ const CasePatchFailed: React.FC<CasePatchFailedProps> = ({ installPath, onGoBack
                     }
                 }
             } else if (input === 's' || input === 'S') {
-                // Skip to solution (back to menu? or just finish for this case?)
-                // Guide says: "스킵하고 다음 솔루션을 보려면 S" but for Case 1, usually we just want to go back?
-                // The guide says "Q를 누를 때 종료하지 않고 초기메뉴로 진입으로 수정"
-                // For '2. Force Patch' it has S option. For 1, maybe just back?
-                // Let's stick to Q for back. S wasn't explicitly requested for Case 1 in the guide text for "1번 선택 시", but for "2번 선택 시".
-                // But wait, the guide says "* 1번 선택 시 ... 2. Q를 누를 때 종료하지 않고 초기메뉴로 진입으로 수정"
+                // 스킵 로직 (필요시 구현)
             } else if (input === 'q' || input === 'Q') {
                 onGoBack();
             }
@@ -138,8 +133,6 @@ const CasePatchFailed: React.FC<CasePatchFailedProps> = ({ installPath, onGoBack
                 }
             } else {
                 if (input || key.return || key.escape || key.backspace || key.delete) {
-                    // Logic says "done" just finishes. Maybe go back to menu?
-                    // Guide says "Q를 누를 때 종료하지 않고 초기메뉴로 진입"
                     onGoBack();
                 }
             }

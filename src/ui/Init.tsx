@@ -13,7 +13,7 @@ interface InitProps {
 const Init: React.FC<InitProps> = ({ onDone, onExit }) => {
     const [status, setStatus] = useState<'LOADING' | 'CONFIRM' | 'INPUT'>('LOADING');
     const [installPath, setInstallPath] = useState<string>('');
-    const [version, setVersion] = useState<string>('Checking...'); // Placeholder for version check if possible
+    const [version, setVersion] = useState<string>('Checking...'); // 버전 확인 중
 
     useEffect(() => {
         const init = async () => {
@@ -45,7 +45,6 @@ const Init: React.FC<InitProps> = ({ onDone, onExit }) => {
     const handlePathSet = (path: string) => {
         setInstallPath(path);
         setLastInstallPath(path);
-        // We could also try to detect version from the path here if needed
     };
 
     useInput((input, key) => {

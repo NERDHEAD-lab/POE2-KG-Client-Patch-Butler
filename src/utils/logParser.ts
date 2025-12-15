@@ -33,7 +33,7 @@ export async function parseLog(installPath: string): Promise<LogParseResult> {
     let currentPid: string | null = null;
     let hasError = false;
 
-    // Find the last "KAKAO LOG FILE OPENING"
+    // 마지막 "KAKAO LOG FILE OPENING" 찾기
     let lastOpeningIndex = -1;
     for (let i = lines.length - 1; i >= 0; i--) {
         if (lines[i].includes('***** KAKAO LOG FILE OPENING *****')) {
@@ -48,7 +48,7 @@ export async function parseLog(installPath: string): Promise<LogParseResult> {
 
     const recentLines = lines.slice(lastOpeningIndex);
 
-    // Extract PID from the first few lines of the recent block usually
+    // PID 추출
     // Format: DATE TIME ... [INFO Client PID] ...
     const pidRegex = /\[(?:INFO|WARN|ERROR)\s+Client\s+(\d+)\]/;
 
@@ -56,12 +56,12 @@ export async function parseLog(installPath: string): Promise<LogParseResult> {
         const match = line.match(pidRegex);
         if (match) {
             currentPid = match[1];
-            break; // Found the PID for this session
+            break;
         }
     }
 
     for (const line of recentLines) {
-        // Filter by PID if found
+        // PID로 필터링
         if (currentPid && !line.includes(`Client ${currentPid}`)) {
             continue;
         }
@@ -87,9 +87,7 @@ export async function parseLog(installPath: string): Promise<LogParseResult> {
         }
     }
 
-    // If no error found, we might assume patch was successful or not needed, 
-    // so we clear the list to avoid unnecessary downloads unless user forces it?
-    // User req: "마지막 log file opening 블록에서 실패 했을때만 처리"
+    // 에러가 없으면 다운로드 목록 초기화
     if (!hasError) {
         filesToDownload = [];
     } else {
