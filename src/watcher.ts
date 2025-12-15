@@ -54,30 +54,45 @@ export const startWatcher = async () => {
     }, 5000);
 };
 
-const triggerAlert = async () => {
-    // PowerShell script to show Yes/No dialog
-    const psScript = `
-    Add-Type -AssemblyName PresentationCore,PresentationFramework
-    $Result = [System.Windows.MessageBox]::Show('POE2 업데이트 실패가 감지되었습니다. 오류 해결 마법사를 진행 하겠습니까?', 'POE2 Patch Butler', 'YesNo', 'Warning')
-    if ($Result -eq 'Yes') { exit 0 } else { exit 1 }
-    `;
+const triggerAlert = (): Promise<void> => {
+    return new Promise((resolve, reject) => {
+        // PowerShell script to show Yes/No dialog
+        const psScript = "Add-Type -AssemblyName PresentationCore,PresentationFramework; $Result = [System.Windows.MessageBox]::Show('POE2 업데이트 실패가 감지되었습니다. 오류 해결 마법사를 진행 하겠습니까?', 'POE2 Patch Butler', 'YesNo', 'Warning'); if ($Result -eq 'Yes') { exit 0 } else { exit 1 }";
 
-    try {
-        await execAsync(`powershell -Command "${psScript}"`, { windowsHide: true });
-        // If exit code 0 (Yes), run the fix
-        console.log('User accepted fix. Launching Butler...');
+        console.log('Forcing alert for testing...');
 
-        const exePath = process.execPath;
-        // Spawn detached process
-        const spawn = require('child_process').spawn;
-        const child = spawn(exePath, ['--fix-patch'], {
-            detached: true,
-            stdio: 'ignore'
+        // Use spawn to avoid shell escaping issues and better handle execution
+        const { spawn } = require('child_process');
+        const child = spawn('powershell', ['-Command', psScript], {
+            windowsHide: true
         });
-        child.unref();
 
-    } catch (e) {
-        // Exit code 1 (No) or error
-        console.log('User declined or error:', e);
-    }
+        child.on('close', (code: number) => {
+            if (code === 0) {
+                // Yes
+                console.log('User accepted fix. Launching Butler...');
+                const exePath = process.execPath;
+                // Use 'start' command to ensure a new console window is created
+                const { spawn } = require('child_process');
+                const startArgs = ['/c', 'start', 'POE2 Patch Butler', exePath, '--fix-patch'];
+
+                const fixChild = spawn('cmd', startArgs, {
+                    detached: true,
+                    stdio: 'ignore',
+                    windowsHide: false
+                });
+                fixChild.unref();
+                resolve();
+            } else {
+                // No or error
+                console.log('User declined or error code:', code);
+                resolve(); // Resolve anyway to continue watching
+            }
+        });
+
+        child.on('error', (err: Error) => {
+            console.error('Failed to spawn alert:', err);
+            reject(err);
+        });
+    });
 };
