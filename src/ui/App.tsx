@@ -88,54 +88,34 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
     const [showAutoDetectMsg, setShowAutoDetectMsg] = useState(false);
 
     React.useEffect(() => {
-        const checkRegistry = async () => {
-            try {
-                const { exec } = await import('child_process');
-                exec('reg query "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" /v "POE2_Patch_Butler_Watch"', (err) => {
-                    setIsAutoDetectEnabled(!err);
-                });
-            } catch (e) { }
+        const initAutoDetect = async () => {
+            const enabled = await import('../utils/autoDetect.js').then(m => m.isAutoDetectRegistryEnabled());
+            setIsAutoDetectEnabled(enabled);
+            if (enabled) {
+                // Ensure watcher is running/restarted with correct binary
+                import('../utils/autoDetect.js').then(m => m.restartWatcher());
+            }
         };
-        checkRegistry();
+        initAutoDetect();
     }, []);
 
     const toggleAutoDetect = async () => {
-        const { exec } = await import('child_process');
-        const exePath = process.execPath;
+        const { enableAutoDetectRegistry, disableAutoDetectRegistry, startWatcherProcess, stopWatcherProcess } = await import('../utils/autoDetect.js');
 
         if (isAutoDetectEnabled) {
             // Turning OFF
-            // 1. Remove from registry (ignore error if key doesn't exist)
-            exec('reg delete "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" /v "POE2_Patch_Butler_Watch" /f', () => {
-                // Always proceed to update state and kill process
-                setIsAutoDetectEnabled(false);
-                setShowAutoDetectMsg(true);
-                setTimeout(() => setShowAutoDetectMsg(false), 3000);
-
-                // 2. Kill running watcher process FORCEFULLY
-                const currentExeName = path.basename(process.execPath);
-                // Use Stop-Process -Force to ensure termination
-                const psCommand = `Get-CimInstance Win32_Process | Where-Object { $_.Name -eq '${currentExeName}' -and $_.CommandLine -like '*--watch*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }`;
-                exec(`powershell -Command "${psCommand}"`, { windowsHide: true }, () => { });
-            });
+            await disableAutoDetectRegistry();
+            await stopWatcherProcess();
+            setIsAutoDetectEnabled(false);
+            setShowAutoDetectMsg(true);
+            setTimeout(() => setShowAutoDetectMsg(false), 3000);
         } else {
-            // Add to registry
-            const command = `\\"${exePath}\\" --watch`;
-            exec(`reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" /v "POE2_Patch_Butler_Watch" /t REG_SZ /d "${command}" /f`, (err) => {
-                if (!err) {
-                    setIsAutoDetectEnabled(true);
-                    setShowAutoDetectMsg(true);
-                    setTimeout(() => setShowAutoDetectMsg(false), 3000);
-
-                    // Start watcher process immediately
-                    // Use subprocess to detach
-                    spawn(exePath, ['--watch'], {
-                        detached: true,
-                        stdio: 'ignore',
-                        windowsHide: true
-                    }).unref();
-                }
-            });
+            // Turning ON
+            await enableAutoDetectRegistry();
+            startWatcherProcess();
+            setIsAutoDetectEnabled(true);
+            setShowAutoDetectMsg(true);
+            setTimeout(() => setShowAutoDetectMsg(false), 3000);
         }
     };
 
