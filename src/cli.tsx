@@ -5,6 +5,8 @@ import meow from 'meow';
 import App from './ui/App.js';
 import { startWatcher } from './watcher.js';
 
+import { checkSingleInstance } from './utils/singleInstance.js';
+
 const cli = meow(`
 	Usage
 	  $ poe2-patch-butler
@@ -30,5 +32,12 @@ const cli = meow(`
 if (cli.flags.watch) {
 	startWatcher();
 } else {
+	// Check for existing instance (Close others if fix-patch, else Focus existing)
+	const shouldStart = await checkSingleInstance(cli.flags.fixPatch ?? false);
+	if (!shouldStart) {
+		process.exit(0);
+	}
+
+	process.title = 'POE2 Patch Butler';
 	render(<App initialMode={cli.flags.fixPatch ? 'FIX_PATCH' : 'NORMAL'} />);
 }
