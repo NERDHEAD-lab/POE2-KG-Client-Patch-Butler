@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.3.0](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/compare/1.2.1...1.3.0) (2025-12-17)
+
+
+### Features
+
+* 공지 화면 추가 ([4380372](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/4380372e7cfb3c4ff061694c2511de1a8fd0b9e0))
+* 오류 자동 감지 기능 개선 ([09ffc17](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/09ffc17d8af74c4a918a8d6052c91838a73307f6))
+
+
+### Bug Fixes
+
+* "홈페이지를 통해 실행했지만 런처가 실행 되자마자 꺼지거나, 실행되지 않습니다."의 step4 수동 진단의 url이 잘못되어 있는 문제 수정 ([1a1bae7](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/1a1bae7181ea1880bc492a862595cfd9da79db87))
+* 자동 감지가 켜져있을 경우 업데이트에 실패 할 수도 있는 문제 수정 ([b1b9689](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/b1b96897cd798f69d11b491ce2408cd398a18b9a))
+
 ## [1.2.1](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/compare/1.2.0...1.2.1) (2025-12-15)
 
 
