@@ -43,9 +43,15 @@
 
         const renderer = {
             image({ href, title, text }) {
+                const params = new URLSearchParams(window.location.search);
+                const docsParam = params.get('docs');
                 const isRelative = !/^https?:\/\//i.test(href);
                 if (isRelative) {
-                    href = RAW_BASE + href.replace(/^\.\//, "");
+                    if (docsParam) {
+                        href = RAW_BASE + "docs/" + href.replace(/^\.\//, "");
+                    } else {
+                        href = RAW_BASE + href.replace(/^\.\//, "");
+                    }
                 }
                 const out = `<img src="${href}" alt="${text}"${title ? ` title="${title}"` : ""} style="max-width: 100%;">`;
                 return out;
