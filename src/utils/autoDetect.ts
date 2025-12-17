@@ -9,6 +9,8 @@ const REG_KEY_PATH = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run';
 const REG_VALUE_NAME = 'POE2_Patch_Butler_Watch';
 const VBS_NAME = 'silent_launcher.vbs';
 
+
+
 const generateSilentLauncher = (exePath: string) => {
     const vbsContent = `
 Set WshShell = CreateObject("WScript.Shell")
@@ -39,6 +41,9 @@ export const isAutoDetectRegistryEnabled = async (): Promise<boolean> => {
 };
 
 export const enableAutoDetectRegistry = async (): Promise<void> => {
+    // Cleanup any existing configuration first (handles migration)
+    await disableAutoDetectRegistry();
+
     const exePath = process.execPath;
     const vbsPath = generateSilentLauncher(exePath);
 
@@ -49,13 +54,34 @@ export const enableAutoDetectRegistry = async (): Promise<void> => {
 
 export const disableAutoDetectRegistry = async (): Promise<void> => {
     try {
+        // 1. Query existing registry value to find the file path
+        let existingPath = '';
+        try {
+            const { stdout } = await execAsync(`reg query "${REG_KEY_PATH}" /v "${REG_VALUE_NAME}"`);
+            // stdout example: "    POE2_Patch_Butler_Watch    REG_SZ    wscript.exe "C:\Path\To\silent_launcher.vbs""
+            const match = stdout.match(/"([^"]+\.vbs)"/i);
+            if (match && match[1]) {
+                existingPath = match[1];
+            }
+        } catch { }
+
+        // 2. Delete the registry key
         await execAsync(`reg delete "${REG_KEY_PATH}" /v "${REG_VALUE_NAME}" /f`);
 
-        // Clean up VBS file if it exists
+        // 3. Delete the file if found from registry
+        if (existingPath && fs.existsSync(existingPath)) {
+            try {
+                fs.unlinkSync(existingPath);
+            } catch { }
+        }
+
+        // 4. Also clean up the default AppData path just in case (as usage fallback)
         const appData = process.env.APPDATA || process.env.USERPROFILE || '.';
-        const vbsPath = path.join(appData, 'POE2PatchButler', VBS_NAME);
-        if (fs.existsSync(vbsPath)) {
-            fs.unlinkSync(vbsPath);
+        const defaultVbsPath = path.join(appData, 'POE2PatchButler', VBS_NAME);
+        if (fs.existsSync(defaultVbsPath)) {
+            try {
+                fs.unlinkSync(defaultVbsPath);
+            } catch { }
         }
     } catch {
     }
