@@ -67,9 +67,12 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
                     await downloadFile(updateInfo.url, tempPath, 'update.exe', (s) => {
                         setDownloadProgress(s.progress);
                     });
+
+                    const { stopWatcherProcess } = await import('../utils/autoDetect.js');
+                    await stopWatcherProcess();
+
                     performSelfUpdate(tempPath);
                 } catch (e) {
-                    // Update failed, reset?
                     setIsUpdating(false);
                 }
             };
