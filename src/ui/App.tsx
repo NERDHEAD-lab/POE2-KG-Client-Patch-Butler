@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Text, useApp, useInput, useStdout } from 'ink';
+import axios from 'axios';
 import Init from './Init.js';
 import MainMenu from './MainMenu.js';
 import CasePatchFailed from './Menu/CasePatchFailed.js';
@@ -30,7 +31,8 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
     const [installPath, setInstallPath] = useState('');
     const [appVersion, setAppVersion] = useState(getAppVersion());
 
-
+    // Server Notice
+    const [serverNotice, setServerNotice] = useState<string | null>(null);
 
     const handleInitDone = (path: string, version: string) => {
         setInstallPath(path);
@@ -48,6 +50,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
     const [initStatus, setInitStatus] = useState<'LOADING' | 'PROCESS_CHECK' | 'CONFIRM' | 'INPUT' | null>(null);
 
     React.useEffect(() => {
+        // Check for updates
         if (process.env.NODE_ENV !== 'development') {
             checkForUpdate().then(res => {
                 if (res.hasUpdate && res.downloadUrl) {
@@ -55,6 +58,28 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
                 }
             });
         }
+
+        // Fetch Server Notice
+        const fetchNotice = async () => {
+            try {
+                const response = await axios.get('https://nerdhead-lab.github.io/POE2-KG-Client-Patch-Butler/notice.txt');
+                if (response.status === 200 && response.data) {
+                    const rawText = typeof response.data === 'string' ? response.data : String(response.data);
+                    // Simple sanitization: 
+                    // 1. Trim whitespace
+                    // 2. Remove non-printable characters (except slightly common ones like newline)
+                    // 3. Limit length to prevent UI overflow attacks
+                    const cleanText = rawText.replace(/[^\x20-\x7E\n\r\t\uAC00-\uD7A3]/g, '').trim().slice(0, 5000);
+
+                    if (cleanText.length > 0) {
+                        setServerNotice(cleanText);
+                    }
+                }
+            } catch (e) {
+                // Ignore parsing errors or network failures
+            }
+        };
+        fetchNotice();
     }, []);
 
     const handleUpdate = () => {
@@ -196,6 +221,17 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
                     <Text color="red">카카오야 제발 일해라</Text>
                     <Text>POE2 카카오게임즈 클라이언트 정상화 기원 <Text bold color="red">최초 발생일로 부터 {getDayCount()}일차</Text></Text>
                 </Box>
+                {/* Server Notice */}
+                {serverNotice && (
+                    <Box flexDirection="column">
+                        <Box borderStyle="single" borderColor="white" paddingX={1} marginTop={0} flexDirection="column">
+                            <Text>{serverNotice}</Text>
+                        </Box>
+                        <Box position="absolute" marginTop={0} marginLeft={2}>
+                            <Text> 공지 </Text>
+                        </Box>
+                    </Box>
+                )}
             </Box>
 
             {/* Body */}
@@ -233,7 +269,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
                     <Text color="gray">powered by NERDHEAD ( https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler )</Text>
                 </Box>
             </Box>
-        </Box>
+        </Box >
     );
 };
 
