@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.1](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/compare/1.3.0...1.3.1) (2025-12-17)
+
+
+### Bug Fixes
+
+* Windows가 켜질 때, 자동 감지가 터미널로 노출되는 문제 수정 ([2095258](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/209525838f34d0c02712777e3e06cc4b84db0ae8))
+
 ## [1.3.0](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/compare/1.2.1...1.3.0) (2025-12-17)
 
 
