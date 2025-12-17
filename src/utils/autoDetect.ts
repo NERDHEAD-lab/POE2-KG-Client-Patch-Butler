@@ -16,7 +16,15 @@ WshShell.Run """${exePath}"" --watch", 0
 Set WshShell = Nothing
     `.trim();
 
-    const vbsPath = path.join(path.dirname(exePath), VBS_NAME);
+    // Use AppData to avoid permission issues in Program Files
+    const appData = process.env.APPDATA || process.env.USERPROFILE || '.';
+    const targetDir = path.join(appData, 'POE2PatchButler');
+
+    if (!fs.existsSync(targetDir)) {
+        fs.mkdirSync(targetDir, { recursive: true });
+    }
+
+    const vbsPath = path.join(targetDir, VBS_NAME);
     fs.writeFileSync(vbsPath, vbsContent);
     return vbsPath;
 };
@@ -44,7 +52,8 @@ export const disableAutoDetectRegistry = async (): Promise<void> => {
         await execAsync(`reg delete "${REG_KEY_PATH}" /v "${REG_VALUE_NAME}" /f`);
 
         // Clean up VBS file if it exists
-        const vbsPath = path.join(path.dirname(process.execPath), VBS_NAME);
+        const appData = process.env.APPDATA || process.env.USERPROFILE || '.';
+        const vbsPath = path.join(appData, 'POE2PatchButler', VBS_NAME);
         if (fs.existsSync(vbsPath)) {
             fs.unlinkSync(vbsPath);
         }
