@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Text, useApp, useInput, useStdout } from 'ink';
+import axios from 'axios';
 import Init from './Init.js';
 import MainMenu from './MainMenu.js';
 import CasePatchFailed from './Menu/CasePatchFailed.js';
@@ -30,7 +31,8 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
     const [installPath, setInstallPath] = useState('');
     const [appVersion, setAppVersion] = useState(getAppVersion());
 
-
+    // Server Notice
+    const [serverNotice, setServerNotice] = useState<string | null>(null);
 
     const handleInitDone = (path: string, version: string) => {
         setInstallPath(path);
@@ -48,6 +50,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
     const [initStatus, setInitStatus] = useState<'LOADING' | 'PROCESS_CHECK' | 'CONFIRM' | 'INPUT' | null>(null);
 
     React.useEffect(() => {
+        // Check for updates
         if (process.env.NODE_ENV !== 'development') {
             checkForUpdate().then(res => {
                 if (res.hasUpdate && res.downloadUrl) {
@@ -55,6 +58,28 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
                 }
             });
         }
+
+        // Fetch Server Notice
+        const fetchNotice = async () => {
+            try {
+                const response = await axios.get('https://nerdhead-lab.github.io/POE2-KG-Client-Patch-Butler/notice.txt');
+                if (response.status === 200 && response.data) {
+                    const rawText = typeof response.data === 'string' ? response.data : String(response.data);
+                    // Simple sanitization: 
+                    // 1. Trim whitespace
+                    // 2. Remove non-printable characters (except slightly common ones like newline)
+                    // 3. Limit length to prevent UI overflow attacks
+                    const cleanText = rawText.replace(/[^\x20-\x7E\n\r\t\uAC00-\uD7A3]/g, '').trim().slice(0, 5000);
+
+                    if (cleanText.length > 0) {
+                        setServerNotice(cleanText);
+                    }
+                }
+            } catch (e) {
+                // Ignore parsing errors or network failures
+            }
+        };
+        fetchNotice();
     }, []);
 
     const handleUpdate = () => {
@@ -67,9 +92,12 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
                     await downloadFile(updateInfo.url, tempPath, 'update.exe', (s) => {
                         setDownloadProgress(s.progress);
                     });
+
+                    const { stopWatcherProcess } = await import('../utils/autoDetect.js');
+                    await stopWatcherProcess();
+
                     performSelfUpdate(tempPath);
                 } catch (e) {
-                    // Update failed, reset?
                     setIsUpdating(false);
                 }
             };
@@ -88,54 +116,34 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
     const [showAutoDetectMsg, setShowAutoDetectMsg] = useState(false);
 
     React.useEffect(() => {
-        const checkRegistry = async () => {
-            try {
-                const { exec } = await import('child_process');
-                exec('reg query "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" /v "POE2_Patch_Butler_Watch"', (err) => {
-                    setIsAutoDetectEnabled(!err);
-                });
-            } catch (e) { }
+        const initAutoDetect = async () => {
+            const enabled = await import('../utils/autoDetect.js').then(m => m.isAutoDetectRegistryEnabled());
+            setIsAutoDetectEnabled(enabled);
+            if (enabled) {
+                // Ensure watcher is running/restarted with correct binary
+                import('../utils/autoDetect.js').then(m => m.restartWatcher());
+            }
         };
-        checkRegistry();
+        initAutoDetect();
     }, []);
 
     const toggleAutoDetect = async () => {
-        const { exec } = await import('child_process');
-        const exePath = process.execPath;
+        const { enableAutoDetectRegistry, disableAutoDetectRegistry, startWatcherProcess, stopWatcherProcess } = await import('../utils/autoDetect.js');
 
         if (isAutoDetectEnabled) {
             // Turning OFF
-            // 1. Remove from registry (ignore error if key doesn't exist)
-            exec('reg delete "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" /v "POE2_Patch_Butler_Watch" /f', () => {
-                // Always proceed to update state and kill process
-                setIsAutoDetectEnabled(false);
-                setShowAutoDetectMsg(true);
-                setTimeout(() => setShowAutoDetectMsg(false), 3000);
-
-                // 2. Kill running watcher process FORCEFULLY
-                const currentExeName = path.basename(process.execPath);
-                // Use Stop-Process -Force to ensure termination
-                const psCommand = `Get-CimInstance Win32_Process | Where-Object { $_.Name -eq '${currentExeName}' -and $_.CommandLine -like '*--watch*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }`;
-                exec(`powershell -Command "${psCommand}"`, { windowsHide: true }, () => { });
-            });
+            await disableAutoDetectRegistry();
+            await stopWatcherProcess();
+            setIsAutoDetectEnabled(false);
+            setShowAutoDetectMsg(true);
+            setTimeout(() => setShowAutoDetectMsg(false), 3000);
         } else {
-            // Add to registry
-            const command = `\\"${exePath}\\" --watch`;
-            exec(`reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" /v "POE2_Patch_Butler_Watch" /t REG_SZ /d "${command}" /f`, (err) => {
-                if (!err) {
-                    setIsAutoDetectEnabled(true);
-                    setShowAutoDetectMsg(true);
-                    setTimeout(() => setShowAutoDetectMsg(false), 3000);
-
-                    // Start watcher process immediately
-                    // Use subprocess to detach
-                    spawn(exePath, ['--watch'], {
-                        detached: true,
-                        stdio: 'ignore',
-                        windowsHide: true
-                    }).unref();
-                }
-            });
+            // Turning ON
+            await enableAutoDetectRegistry();
+            startWatcherProcess();
+            setIsAutoDetectEnabled(true);
+            setShowAutoDetectMsg(true);
+            setTimeout(() => setShowAutoDetectMsg(false), 3000);
         }
     };
 
@@ -213,6 +221,17 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
                     <Text color="red">카카오야 제발 일해라</Text>
                     <Text>POE2 카카오게임즈 클라이언트 정상화 기원 <Text bold color="red">최초 발생일로 부터 {getDayCount()}일차</Text></Text>
                 </Box>
+                {/* Server Notice */}
+                {serverNotice && (
+                    <Box flexDirection="column">
+                        <Box borderStyle="single" borderColor="white" paddingX={1} marginTop={0} flexDirection="column">
+                            <Text>{serverNotice}</Text>
+                        </Box>
+                        <Box position="absolute" marginTop={0} marginLeft={2}>
+                            <Text> 공지 </Text>
+                        </Box>
+                    </Box>
+                )}
             </Box>
 
             {/* Body */}
@@ -250,7 +269,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
                     <Text color="gray">powered by NERDHEAD ( https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler )</Text>
                 </Box>
             </Box>
-        </Box>
+        </Box >
     );
 };
 

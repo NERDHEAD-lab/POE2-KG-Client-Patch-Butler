@@ -124,7 +124,7 @@ const CaseExecuteFailed: React.FC<CaseExecuteFailedProps> = ({ installPath, onGo
     };
 
     const openManualGuide = () => {
-        const url = 'https://nerdhead-lab.github.io/POE2-KG-Client-Patch-Butler?page=solution.md';
+        const url = 'https://nerdhead-lab.github.io/POE2-KG-Client-Patch-Butler?docs=solution.md';
         const start = (process.platform == 'darwin' ? 'open' : process.platform == 'win32' ? 'start' : 'xdg-open');
         import('child_process').then(cp => {
             cp.spawn('cmd', ['/c', 'start', url], { windowsVerbatimArguments: true });
@@ -261,7 +261,7 @@ const CaseExecuteFailed: React.FC<CaseExecuteFailedProps> = ({ installPath, onGo
 
                     <Box marginBottom={1} />
                     <Text>수동 진단 Link:</Text>
-                    <Text color="blue" underline>https://nerdhead-lab.github.io/POE2-KG-Client-Patch-Butler?page=solution.md</Text>
+                    <Text color="blue" underline>https://nerdhead-lab.github.io/POE2-KG-Client-Patch-Butler?docs=solution.md</Text>
 
                     <Box marginBottom={1} />
                     <Text>(가이드를 보려면 <Text bold color="cyan">Enter</Text>, 초기메뉴는 <Text bold color="cyan">Q</Text>)</Text>

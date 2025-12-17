@@ -20,8 +20,6 @@ export const getLatestVersionInfo = async (): Promise<LatestVersionInfo | null> 
         const tagName = latestData.tag_name; // e.g., "v1.2.0"
         const cleanLatestVersion = tagName.replace(/^v/, '');
 
-        // Find asset with name ending in .exe but NOT containing 'setup' or 'installer'
-        // Prioritize: poe2-patch-butler.exe
         const asset = latestData.assets.find((a: any) =>
             a.name.endsWith('.exe') &&
             !a.name.toLowerCase().includes('setup') &&
@@ -38,3 +36,13 @@ export const getLatestVersionInfo = async (): Promise<LatestVersionInfo | null> 
         return null;
     }
 };
+
+// for testing
+// export const getLatestVersionInfo = async (): Promise<LatestVersionInfo | null> => {
+//     // TEST MODE: Hardcoded for testing self-update
+//     return {
+//         version: '99.99.99',
+//         downloadUrl: 'https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/releases/download/1.3.0-SNAPSHOT/poe2-patch-butler.exe',
+//         body: 'Testing Self Update - Hardcoded URL'
+//     };
+// };
