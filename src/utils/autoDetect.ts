@@ -1,11 +1,25 @@
 import { exec, spawn } from 'child_process';
 import path from 'path';
+import fs from 'fs';
 import { promisify } from 'util';
 
 const execAsync = promisify(exec);
 
 const REG_KEY_PATH = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run';
 const REG_VALUE_NAME = 'POE2_Patch_Butler_Watch';
+const VBS_NAME = 'silent_launcher.vbs';
+
+const generateSilentLauncher = (exePath: string) => {
+    const vbsContent = `
+Set WshShell = CreateObject("WScript.Shell")
+WshShell.Run """${exePath}"" --watch", 0
+Set WshShell = Nothing
+    `.trim();
+
+    const vbsPath = path.join(path.dirname(exePath), VBS_NAME);
+    fs.writeFileSync(vbsPath, vbsContent);
+    return vbsPath;
+};
 
 export const isAutoDetectRegistryEnabled = async (): Promise<boolean> => {
     try {
@@ -18,13 +32,22 @@ export const isAutoDetectRegistryEnabled = async (): Promise<boolean> => {
 
 export const enableAutoDetectRegistry = async (): Promise<void> => {
     const exePath = process.execPath;
-    const command = `\\"${exePath}\\" --watch`;
+    const vbsPath = generateSilentLauncher(exePath);
+
+    // Use wscript.exe to run the VBScript
+    const command = `wscript.exe \\"${vbsPath}\\"`;
     await execAsync(`reg add "${REG_KEY_PATH}" /v "${REG_VALUE_NAME}" /t REG_SZ /d "${command}" /f`);
 };
 
 export const disableAutoDetectRegistry = async (): Promise<void> => {
     try {
         await execAsync(`reg delete "${REG_KEY_PATH}" /v "${REG_VALUE_NAME}" /f`);
+
+        // Clean up VBS file if it exists
+        const vbsPath = path.join(path.dirname(process.execPath), VBS_NAME);
+        if (fs.existsSync(vbsPath)) {
+            fs.unlinkSync(vbsPath);
+        }
     } catch {
     }
 };
