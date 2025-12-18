@@ -26,8 +26,8 @@ POE2 Patch Butler가 어떤 방식으로 오류를 해결하는지에 대한 기
 이 경우는 로그에 패치 실패 기록이 없거나, 이미 패치는 완료되었다고 나오는데 실행이 안 되는 상황입니다.
 
 ### 동작 원리 (단계별 진행)
-1.  **핵심 파일 강제 복구**: `autoDetect`나 `CASE 1`과 달리 로그에서 실패한 파일을 찾지 못했으므로, 미리 정의된 **필수 파일(Whitelist)** 목록(`Client.exe`, `Renderer64.dll`, `FMOD` 관련 파일 등)을 강제로 CDN에서 다시 받아 덮어씁니다.
-2.  **셰이더 캐시 초기화**: `My Games/Path of Exile 2` 내의 `ShaderCache`, `D3D12`, `Vulkan` 폴더를 삭제하여 그래픽 랜더링 관련 충돌을 방지합니다.
+1.  **핵심 파일 강제 복구**: `autoDetect`나 `CASE 1`과 달리 로그에서 실패한 파일을 찾지 못했으므로, 미리 정의된 **필수 파일(Whitelist)** 목록(`Client.exe`, `PathOfExile.exe`, `PackCheck.exe` 등 실행 파일류)을 강제로 CDN에서 다시 받아 덮어씁니다.
+2.  **셰이더 캐시 초기화**: `%APPDATA%/Path of Exile 2` 내의 `ShaderCacheD3D12`, `ShaderCacheVulkan` 폴더를 삭제하여 그래픽 랜더링 관련 충돌을 방지합니다.
 3.  **PackCheck 실행**: POE 클라이언트에 내장된 `PackCheck.exe`를 실행하여 거대 데이터 파일(`Content.ggpk`)의 무결성을 검사합니다.
 
 ---
