@@ -57,7 +57,7 @@ export const startWatcher = async () => {
 const triggerAlert = (): Promise<void> => {
     return new Promise((resolve, reject) => {
         // PowerShell script to show Yes/No dialog
-        const psScript = "Add-Type -AssemblyName PresentationCore,PresentationFramework; $Result = [System.Windows.MessageBox]::Show('POE2 업데이트 실패가 감지되었습니다. 오류 해결 마법사를 진행 하겠습니까?', 'POE2 Patch Butler', 'YesNo', 'Warning'); if ($Result -eq 'Yes') { exit 0 } else { exit 1 }";
+        const psScript = "Add-Type -AssemblyName PresentationCore,PresentationFramework; $Result = [System.Windows.MessageBox]::Show('POE2 업데이트 실패가 감지되었습니다. 오류 해결 마법사를 진행 하겠습니까?', 'POE2 Patch Butler', 'YesNo', 'Warning', [System.Windows.MessageBoxResult]::No, [System.Windows.MessageBoxOptions]::DefaultDesktopOnly); if ($Result -eq 'Yes') { exit 0 } else { exit 1 }";
 
         console.log('Forcing alert for testing...');
 
