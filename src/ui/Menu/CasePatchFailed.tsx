@@ -60,7 +60,7 @@ const CasePatchFailed: React.FC<CasePatchFailedProps> = ({ installPath, onGoBack
         if (step === 'DOWNLOADING' && logResult) {
             const download = async () => {
                 try {
-                    if (!logResult.webRoot) throw new Error('Web root not found in log.');
+                    if (!logResult.webRoot) throw new Error('로그 파일에서 Web Root 정보를 찾을 수 없습니다.');
 
                     const result = await downloadFiles(
                         logResult.webRoot,

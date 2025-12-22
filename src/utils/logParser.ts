@@ -21,7 +21,7 @@ export async function parseLog(installPath: string): Promise<LogParseResult> {
     const logFilePath = path.join(installPath, 'logs', 'KakaoClient.txt');
 
     if (!fs.existsSync(logFilePath)) {
-        throw new Error(`Log file not found at: ${logFilePath}`);
+        throw new Error(`로그 파일을 찾을 수 없습니다: ${logFilePath}`);
     }
 
     const content = await fs.promises.readFile(logFilePath, 'utf-8');
@@ -108,7 +108,7 @@ export async function parseLog(installPath: string): Promise<LogParseResult> {
 
 export function generateForcePatchResult(baseResult: LogParseResult): LogParseResult {
     if (!baseResult.webRoot) {
-        throw new Error('Web Root not found in log. Cannot force patch.');
+        throw new Error('로그에서 Web Root 정보를 찾을 수 없어 강제 패치를 진행할 수 없습니다.');
     }
     return {
         ...baseResult,
@@ -132,5 +132,5 @@ export async function checkLogForErrors(): Promise<LogParseResult> {
         return parseLog(regPath);
     }
 
-    throw new Error('Install path not found');
+    throw new Error('설치 경로를 찾을 수 없습니다.');
 }

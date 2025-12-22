@@ -100,7 +100,7 @@ export async function downloadFile(
             const isLastAttempt = attempt === MAX_RETRIES;
             if (isLastAttempt) {
                 const status = err.response?.status ? ` (Status: ${err.response.status})` : '';
-                throw new Error(`Failed to download from "${url}"${status}: ${err.message}`);
+                throw new Error(`"${url}" 다운로드 실패${status}: ${err.message}`);
             }
         }
     }
@@ -191,19 +191,46 @@ export async function downloadFiles(
             return { success: false, failures };
         }
 
+
+        // Helper for Korean Error Messages
+        const getFriendlyErrorMessage = (error: any): string => {
+            const msg = error instanceof Error ? error.message : String(error);
+            const code = (error as any).code;
+
+            if (code === 'EBUSY') {
+                return `파일이 현재 사용 중이라 접근할 수 없습니다. (EBUSY)\n게임이나 관련 프로그램이 켜져 있는지 확인해 주세요.`;
+            }
+            if (code === 'EPERM' || code === 'EACCES') {
+                return `파일 권한이 부족합니다. (EACCES)\n관리자 권한으로 실행해 보세요.`;
+            }
+            if (code === 'ENOENT') {
+                return `파일 경로를 찾을 수 없습니다. (${code})`;
+            }
+            if (code === 'ENOSPC') {
+                return `디스크 공간이 부족합니다. (${code})`;
+            }
+
+            return msg;
+        };
+
         // 임시 폴더에서 설치 경로로 이동
         for (const file of files) {
             const tempPath = path.join(tempDir, file);
             const finalPath = path.join(installPath, file);
 
-            if (fs.existsSync(tempPath)) {
-                const finalDir = path.dirname(finalPath);
-                if (!fs.existsSync(finalDir)) {
-                    await fs.promises.mkdir(finalDir, { recursive: true });
-                }
+            try {
+                if (fs.existsSync(tempPath)) {
+                    const finalDir = path.dirname(finalPath);
+                    if (!fs.existsSync(finalDir)) {
+                        await fs.promises.mkdir(finalDir, { recursive: true });
+                    }
 
-                await fs.promises.copyFile(tempPath, finalPath);
-                // 안전을 위해 원본은 임시 폴더에 유지하고, 사용자가 삭제 여부를 결정하도록 함
+                    await fs.promises.copyFile(tempPath, finalPath);
+                    // 안전을 위해 원본은 임시 폴더에 유지하고, 사용자가 삭제 여부를 결정하도록 함
+                }
+            } catch (error) {
+                const friendlyMsg = getFriendlyErrorMessage(error);
+                throw new Error(`${file} 설치 중 오류 발생:\n${friendlyMsg}`);
             }
         }
 
