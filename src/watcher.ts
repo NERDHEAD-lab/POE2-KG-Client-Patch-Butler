@@ -7,21 +7,22 @@ import path from 'path';
 import Tray from './utils/tray.js';
 import { ICON_BASE64 } from './generated/iconBase64.js';
 import { TRAY_APP_BASE64 } from './generated/trayAppBase64.js';
-import { getConfigDirectory } from './utils/config.js';
+import { getAppDataDirectory } from './utils/config.js';
 
 // Keep tray in global scope to prevent garbage collection
 let tray: any = null;
 
 const setupTray = async () => {
     try {
-        const targetDir = getConfigDirectory();
+        const appDataDir = getAppDataDirectory();
+        const binDir = path.join(appDataDir, 'bin');
 
-        if (!fs.existsSync(targetDir)) {
-            fs.mkdirSync(targetDir, { recursive: true });
+        if (!fs.existsSync(binDir)) {
+            fs.mkdirSync(binDir, { recursive: true });
         }
 
-        const iconPath = path.join(targetDir, 'icon.ico');
-        const trayAppPath = path.join(targetDir, 'trayicon.exe');
+        const iconPath = path.join(binDir, 'icon.ico');
+        const trayAppPath = path.join(binDir, 'trayicon.exe');
 
         // Always write the icon to ensure it exists
         fs.writeFileSync(iconPath, Buffer.from(ICON_BASE64, 'base64'));
