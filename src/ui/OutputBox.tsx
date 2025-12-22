@@ -1,15 +1,39 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Text } from 'ink';
+import { logger } from '../utils/logger.js';
 
-interface OutputBoxProps {
-    message: string | null;
+interface LogMessage {
+    text: string;
+    type: 'info' | 'warn' | 'error' | 'success';
 }
 
-const OutputBox: React.FC<OutputBoxProps> = ({ message }) => {
+const OutputBox: React.FC = () => {
+    const [message, setMessage] = useState<LogMessage | null>(null);
+
+    useEffect(() => {
+        const handleLog = (event: { message: string, type: 'info' | 'warn' | 'error' | 'success', duration: number }) => {
+            setMessage({ text: event.message, type: event.type });
+            if (event.duration > 0) {
+                setTimeout(() => setMessage(null), event.duration);
+            }
+        };
+
+        logger.on('log', handleLog);
+        return () => {
+            logger.off('log', handleLog);
+        };
+    }, []);
+
+    let color = 'white';
+    if (message?.type === 'info') color = 'white';
+    if (message?.type === 'warn') color = 'yellow';
+    if (message?.type === 'error') color = 'red';
+    if (message?.type === 'success') color = 'green';
+
     return (
         <Box flexDirection="column" marginTop={1}>
             <Box borderStyle="single" borderColor="gray" paddingX={1} flexDirection="column" width="100%">
-                <Text>{message || " "}</Text>
+                <Text color={color}>{message ? message.text : " "}</Text>
             </Box>
             <Box position="absolute" marginTop={0} marginLeft={2}>
                 <Text> Output </Text>

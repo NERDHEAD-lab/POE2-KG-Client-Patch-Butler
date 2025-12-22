@@ -7,7 +7,6 @@ import CasePatchFailed from './Menu/CasePatchFailed.js';
 import CaseExecuteFailed from './Menu/CaseExecuteFailed.js';
 import CaseCrashing from './Menu/CaseCrashing.js';
 import CaseReportIssue from './Menu/CaseReportIssue.js';
-// ... imports
 import Sidebar from './Sidebar.js';
 import OutputBox from './OutputBox.js';
 import { getAppVersion } from '../utils/version.js';
@@ -18,6 +17,7 @@ import { downloadFile } from '../utils/downloader.js';
 import { spawn } from 'child_process';
 import path from 'path';
 import os from 'os';
+import { logger } from '../utils/logger.js';
 
 type Screen = 'INIT' | 'MAIN_MENU' | 'CASE_1' | 'CASE_2' | 'CASE_3' | 'CASE_0';
 
@@ -112,14 +112,6 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
     // Auto-detect toggle
     const [isAutoDetectEnabled, setIsAutoDetectEnabled] = useState(false);
 
-    // Output Message (Toast-like)
-    const [outputMsg, setOutputMsg] = useState<string | null>(null);
-
-    const showToast = (msg: string) => {
-        setOutputMsg(msg);
-        setTimeout(() => setOutputMsg(null), 3000);
-    };
-
     const toggleAutoDetect = async () => {
         const { enableAutoDetectRegistry, disableAutoDetectRegistry, startWatcherProcess, stopWatcherProcess } = await import('../utils/autoDetect.js');
 
@@ -128,15 +120,20 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
             await disableAutoDetectRegistry();
             await stopWatcherProcess();
             setIsAutoDetectEnabled(false);
-            showToast('자동 감지 기능을 껐습니다. (Watcher Stopped)');
+            logger.log('자동 감지 기능을 껐습니다. (Watcher Stopped)', 'warn');
             return false;
         } else {
             // Turning ON
-            await enableAutoDetectRegistry();
-            startWatcherProcess();
-            setIsAutoDetectEnabled(true);
-            showToast('자동 감지 기능을 켰습니다. 업데이트 실패 시 자동으로 해결합니다.');
-            return true;
+            try {
+                await enableAutoDetectRegistry();
+                startWatcherProcess();
+                setIsAutoDetectEnabled(true);
+                logger.log('자동 감지 기능을 켰습니다. 업데이트 실패 시 자동으로 해결합니다.', 'success');
+                return true;
+            } catch (e) {
+                logger.log('자동 감지 설정 실패: ' + e, 'error');
+                return false;
+            }
         }
     };
 
@@ -311,7 +308,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
             <Box marginTop={0} flexDirection="column">
 
                 {/* Output Box (Toast) */}
-                <OutputBox message={outputMsg} />
+                <OutputBox />
 
                 <Box marginTop={0} flexDirection="column">
                     <Text color="gray">POE2 <Text color="#E06C75">'Transferred a partial file'</Text> 문제 해결 기원 <Text color="#E06C75">{getDayCount()}일차</Text></Text>
