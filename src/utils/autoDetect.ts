@@ -75,14 +75,7 @@ export const disableAutoDetectRegistry = async (): Promise<void> => {
             } catch { }
         }
 
-        // 4. Also clean up the default AppData path just in case (as usage fallback)
-        const appData = process.env.APPDATA || process.env.USERPROFILE || '.';
-        const defaultVbsPath = path.join(appData, 'POE2PatchButler', VBS_NAME);
-        if (fs.existsSync(defaultVbsPath)) {
-            try {
-                fs.unlinkSync(defaultVbsPath);
-            } catch { }
-        }
+
     } catch {
     }
 };
