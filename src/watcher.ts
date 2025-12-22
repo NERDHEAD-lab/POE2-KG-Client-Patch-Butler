@@ -1,13 +1,57 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import { spawn } from 'child_process';
 import { isProcessRunning } from './utils/process.js';
 import { checkLogForErrors } from './utils/logParser.js';
+import fs from 'fs';
 import path from 'path';
+// Use local consolidated Tray implementation
+import Tray from './utils/tray.js';
+import { ICON_BASE64 } from './generated/iconBase64.js';
+import { TRAY_APP_BASE64 } from './generated/trayAppBase64.js';
+import { getConfigDirectory } from './utils/config.js';
 
-const execAsync = promisify(exec);
+// Keep tray in global scope to prevent garbage collection
+let tray: any = null;
+
+const setupTray = async () => {
+    try {
+        const targetDir = getConfigDirectory();
+
+        if (!fs.existsSync(targetDir)) {
+            fs.mkdirSync(targetDir, { recursive: true });
+        }
+
+        const iconPath = path.join(targetDir, 'icon.ico');
+        const trayAppPath = path.join(targetDir, 'trayicon.exe');
+
+        // Always write the icon to ensure it exists
+        fs.writeFileSync(iconPath, Buffer.from(ICON_BASE64, 'base64'));
+
+        // Always write the tray binary to ensure it exists
+        fs.writeFileSync(trayAppPath, Buffer.from(TRAY_APP_BASE64, 'base64'));
+
+        tray = await Tray.create({
+            title: 'POE2 Patch Butler',
+            icon: fs.readFileSync(iconPath),
+            useTempDir: true, // Important for pkg/sea execution
+            trayAppPath: trayAppPath // Pass the custom path to our local lib
+        });
+
+        const item = await tray.item("종료 (Quit)", {
+            action: () => {
+                console.log("Quitting via Tray...");
+                process.exit(0);
+            }
+        });
+
+        tray.setMenu(item);
+    } catch (e) {
+        console.error("Failed to initialize system tray:", e);
+    }
+};
 
 export const startWatcher = async () => {
     console.log('Starting POE2 Launcher Watcher...');
+    await setupTray();
 
     let isRunning = false;
     let startTime: number | null = null;
@@ -62,7 +106,6 @@ const triggerAlert = (): Promise<void> => {
         console.log('Forcing alert for testing...');
 
         // Use spawn to avoid shell escaping issues and better handle execution
-        const { spawn } = require('child_process');
         const child = spawn('powershell', ['-Command', psScript], {
             windowsHide: true
         });
@@ -73,7 +116,6 @@ const triggerAlert = (): Promise<void> => {
                 console.log('User accepted fix. Launching Butler...');
                 const exePath = process.execPath;
                 // Use 'start' command to ensure a new console window is created
-                const { spawn } = require('child_process');
                 const startArgs = ['/c', 'start', 'POE2 Patch Butler', exePath, '--fix-patch'];
 
                 const fixChild = spawn('cmd', startArgs, {

@@ -13,7 +13,8 @@
         "package": "node scripts/build-exe.js",
         "dev": "ts-node src/cli.tsx",
         "start": "node dist/cli.cjs",
-        "test": "echo \"Error: no test specified\" && exit 1"
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "generate:assets": "node scripts/generate-icon.js && node scripts/generate-tray-exe.js"
     },
     "keywords": [
         "poe2",
@@ -42,6 +43,7 @@
         "postject": "^1.0.0-alpha.6",
         "react-devtools-core": "^4.28.5",
         "resedit-cli": "^3.0.1",
+        "trayicon": "^1.2.2",
         "ts-node": "^10.9.1",
         "tsup": "^8.0.0",
         "typescript": "^5.3.3"
