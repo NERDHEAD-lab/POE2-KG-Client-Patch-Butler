@@ -1,4 +1,5 @@
 import Conf from 'conf';
+import path from 'path';
 
 // Handle ESM/CJS interop for Conf
 // @ts-ignore
@@ -23,6 +24,10 @@ export const getLastMigratedVersion = (): string => {
 
 export const setLastMigratedVersion = (version: string): void => {
     config.set('lastMigratedVersion', version);
+};
+
+export const getConfigDirectory = (): string => {
+    return path.dirname(config.path);
 };
 
 export const getLastInstallPath = (): string | undefined => {

@@ -2,6 +2,7 @@ import { exec, spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import { promisify } from 'util';
+import { getConfigDirectory } from './config.js';
 
 const execAsync = promisify(exec);
 
@@ -18,9 +19,8 @@ WshShell.Run """${exePath}"" --watch", 0
 Set WshShell = Nothing
     `.trim();
 
-    // Use AppData to avoid permission issues in Program Files
-    const appData = process.env.APPDATA || process.env.USERPROFILE || '.';
-    const targetDir = path.join(appData, 'POE2PatchButler');
+    // Use centralized config directory via Conf
+    const targetDir = getConfigDirectory();
 
     if (!fs.existsSync(targetDir)) {
         fs.mkdirSync(targetDir, { recursive: true });

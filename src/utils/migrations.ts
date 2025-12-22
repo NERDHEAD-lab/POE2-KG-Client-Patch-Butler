@@ -2,6 +2,7 @@ import semver from 'semver';
 import fs from 'fs';
 import path from 'path';
 import { getLastMigratedVersion, setLastMigratedVersion } from './config.js';
+import { isAutoDetectRegistryEnabled, disableAutoDetectRegistry, enableAutoDetectRegistry } from './autoDetect.js';
 
 interface Migration {
     version: string;
@@ -28,6 +29,37 @@ const migrations: Migration[] = [
                 fs.rmSync(oldPath, { recursive: true, force: true });
             } catch (e) {
                 console.error('Failed to remove legacy config folder:', e);
+            }
+        }
+    },
+    {
+        version: '1.3.1',
+        description: 'Move silent_launcher.vbs from executable dir to AppData',
+        run: async () => {
+            const exeDir = path.dirname(process.execPath);
+            const VBS_NAME = 'silent_launcher.vbs';
+            const oldVbsPath = path.join(exeDir, VBS_NAME);
+
+            if (!fs.existsSync(oldVbsPath)) {
+                return;
+            }
+
+            try {
+                const isEnabled = await isAutoDetectRegistryEnabled();
+                if (!isEnabled) {
+                    fs.unlinkSync(oldVbsPath);
+                    return;
+                }
+
+                await disableAutoDetectRegistry();
+
+                if (fs.existsSync(oldVbsPath)) {
+                    fs.unlinkSync(oldVbsPath);
+                }
+
+                await enableAutoDetectRegistry();
+            } catch (e) {
+                console.error('Failed to migrate VBS location:', e);
             }
         }
     }
