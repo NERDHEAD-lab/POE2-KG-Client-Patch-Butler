@@ -1,4 +1,5 @@
 import { spawn } from 'child_process';
+import os from 'os';
 import { isProcessRunning } from './utils/process.js';
 import { checkLogForErrors } from './utils/logParser.js';
 import fs from 'fs';
@@ -11,6 +12,15 @@ import { getAppDataDirectory } from './utils/config.js';
 
 // Keep tray in global scope to prevent garbage collection
 let tray: any = null;
+
+const openOrFocusApp = () => {
+    const newApp = spawn('cmd', ['/c', 'start', 'POE2 Patch Butler', process.execPath], {
+        detached: true,
+        stdio: 'ignore',
+        windowsHide: false
+    });
+    newApp.unref();
+};
 
 const setupTray = async () => {
     try {
@@ -34,17 +44,22 @@ const setupTray = async () => {
             title: 'POE2 Patch Butler',
             icon: fs.readFileSync(iconPath),
             useTempDir: true, // Important for pkg/sea execution
-            trayAppPath: trayAppPath // Pass the custom path to our local lib
+            trayAppPath: trayAppPath, // Pass the custom path to our local lib
+            action: () => openOrFocusApp() // Click action
         });
 
-        const item = await tray.item("종료 (Quit)", {
+        const openItem = await tray.item("열기 (Open)", {
+            action: () => openOrFocusApp()
+        });
+
+        const quitItem = await tray.item("종료 (Quit)", {
             action: () => {
                 console.log("Quitting via Tray...");
                 process.exit(0);
             }
         });
 
-        tray.setMenu(item);
+        tray.setMenu(openItem, quitItem);
     } catch (e) {
         console.error("Failed to initialize system tray:", e);
     }

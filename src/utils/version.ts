@@ -10,7 +10,7 @@ export interface LatestVersionInfo {
 }
 
 export const getAppVersion = (): string => {
-    return process.env.APP_VERSION || 'unknown';
+    return process.env.APP_VERSION || '0.0.0';
 };
 
 export const getLatestVersionInfo = async (): Promise<LatestVersionInfo | null> => {
