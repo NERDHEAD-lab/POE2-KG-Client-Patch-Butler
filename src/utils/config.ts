@@ -19,9 +19,21 @@ const config = new ConfClass({
         },
         lastMigratedVersion: {
             type: 'string',
+        },
+        isBackupEnabled: {
+            type: 'boolean',
+            default: false
         }
     },
 });
+
+export const getBackupEnabled = (): boolean => {
+    return (config.get('isBackupEnabled') as boolean) || false;
+};
+
+export const setBackupEnabled = (enabled: boolean): void => {
+    config.set('isBackupEnabled', enabled);
+};
 
 export const getLastMigratedVersion = (): string => {
     return (config.get('lastMigratedVersion') as string) || '0.0.0';

@@ -11,6 +11,7 @@ import CaseReportIssue from './Menu/CaseReportIssue.js';
 import Sidebar from './Sidebar.js';
 import OutputBox from './OutputBox.js';
 import { getAppVersion } from '../utils/version.js';
+import { getBackupEnabled, setBackupEnabled } from '../utils/config.js';
 import { checkForUpdate } from '../utils/updater.js';
 import { performSelfUpdate } from '../utils/selfUpdate.js';
 import { downloadFile } from '../utils/downloader.js';
@@ -192,7 +193,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
 
     const isInputActive = screen === 'MAIN_MENU' || (screen === 'INIT' && initStatus !== 'INPUT');
 
-    const sidebarItems = [
+    const sidebarItems: any[] = [
         {
             keyChar: 'A',
             description: '오류 자동 감지:',
@@ -211,9 +212,48 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
             }
         },
         {
+            keyChar: 'B',
+            description: '패치 백업 모드:',
+            initialStatus: <Text color="gray"> Checking...</Text>,
+            onInit: (ctx: any) => {
+                const enabled = getBackupEnabled();
+                ctx.setStatus(enabled ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>);
+            },
+            onClick: (ctx: any) => {
+                const current = getBackupEnabled();
+                setBackupEnabled(!current);
+                const newState = !current;
+                ctx.setStatus(newState ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>);
+            }
+        },
+        {
+            type: 'separator'
+        },
+        {
             keyChar: 'P',
             description: '패치노트 확인',
             onClick: () => handleOpenPatchNotes()
+        },
+        {
+            keyChar: 'W',
+            description: '작동원리',
+            onClick: () => {
+                spawn('cmd', ['/c', 'start', 'https://nerdhead-lab.github.io/POE2-KG-Client-Patch-Butler?docs=PRINCIPLES.md'], { windowsVerbatimArguments: true });
+            }
+        },
+        {
+            keyChar: 'I',
+            description: '피드백',
+            onClick: () => {
+                spawn('cmd', ['/c', 'start', 'https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/issues'], { windowsVerbatimArguments: true });
+            }
+        },
+        {
+            keyChar: 'H',
+            description: '자주 묻는 질문',
+            onClick: () => {
+                spawn('cmd', ['/c', 'start', 'https://nerdhead-lab.github.io/POE2-KG-Client-Patch-Butler?docs=FAQ.md'], { windowsVerbatimArguments: true });
+            }
         },
         {
             keyChar: 'U',
