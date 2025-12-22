@@ -29,6 +29,10 @@ const cli = meow(`
 	importMeta: import.meta,
 });
 
+// Run migrations before anything else
+import { runMigrations } from './utils/migrations.js';
+await runMigrations();
+
 if (cli.flags.watch) {
 	startWatcher();
 } else {
