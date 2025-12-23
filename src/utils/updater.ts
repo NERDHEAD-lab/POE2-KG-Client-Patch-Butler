@@ -1,4 +1,5 @@
 import semver from 'semver';
+import { isPortableMode } from './config.js';
 import { getAppVersion, getLatestVersionInfo } from './version.js';
 import { logger } from './logger.js';
 
@@ -6,6 +7,7 @@ export interface UpdateCheckResult {
     hasUpdate: boolean;
     latestVersion: string;
     downloadUrl: string | null;
+    updateType: 'installer' | 'portable';
     releaseNotes: string;
 }
 
@@ -20,8 +22,23 @@ export const checkForUpdate = async (): Promise<UpdateCheckResult> => {
                 hasUpdate: false,
                 latestVersion: '0.0.0',
                 downloadUrl: null,
+                updateType: 'portable',
                 releaseNotes: ''
             };
+        }
+
+        // Determine update type from config
+        const portable = isPortableMode();
+        const updateType = portable ? 'portable' : 'installer';
+
+        // Select URL based on type
+        // if portable -> use portableUrl. if installer -> use setupUrl
+        let selectedUrl = portable ? latestInfo.portableUrl : latestInfo.setupUrl;
+
+        // Fallback: if installer mode but setupUrl missing, try portableUrl (and maybe warn?)
+        // Or if portable mode but portableUrl missing, try setupUrl? (unlikely to work well)
+        if (!selectedUrl && latestInfo.portableUrl) {
+            selectedUrl = latestInfo.portableUrl;
         }
 
         // If current version is "unknown" (dev mode), assume no update
@@ -31,16 +48,18 @@ export const checkForUpdate = async (): Promise<UpdateCheckResult> => {
                 hasUpdate: false,
                 latestVersion: latestInfo.version,
                 downloadUrl: null,
+                updateType: updateType,
                 releaseNotes: ''
             };
         }
 
         if (semver.gt(latestInfo.version, currentVersion)) {
-            logger.info(`Update available: ${currentVersion} -> ${latestInfo.version}`);
+            logger.info(`Update available: ${currentVersion} -> ${latestInfo.version} (${updateType})`);
             return {
                 hasUpdate: true,
                 latestVersion: latestInfo.version,
-                downloadUrl: latestInfo.downloadUrl,
+                downloadUrl: selectedUrl,
+                updateType: updateType,
                 releaseNotes: latestInfo.body
             };
         }
@@ -49,6 +68,7 @@ export const checkForUpdate = async (): Promise<UpdateCheckResult> => {
             hasUpdate: false,
             latestVersion: latestInfo.version,
             downloadUrl: null,
+            updateType: updateType,
             releaseNotes: ''
         };
     } catch (error) {
@@ -57,6 +77,7 @@ export const checkForUpdate = async (): Promise<UpdateCheckResult> => {
             hasUpdate: false,
             latestVersion: '0.0.0',
             downloadUrl: null,
+            updateType: 'portable',
             releaseNotes: ''
         };
     }

@@ -1,6 +1,7 @@
 import Conf from 'conf';
 import path from 'path';
 import process from 'process';
+import fs from 'fs';
 
 // Handle ESM/CJS interop for Conf
 // @ts-ignore
@@ -59,4 +60,14 @@ export const getLastInstallPath = (): string | undefined => {
 
 export const setLastInstallPath = (path: string): void => {
     config.set('lastInstallPath', path);
+};
+// Check if the application is running in portable mode (no uninstaller found)
+export const isPortableMode = (): boolean => {
+    // In dev mode (running via node), we might not have unins000.exe, effectively acting like portable or dev
+    if (process.env.NODE_ENV === 'development') {
+        return true;
+    }
+    const appRoot = path.dirname(process.execPath);
+    const uninstallerPath = path.join(appRoot, 'unins000.exe');
+    return !fs.existsSync(uninstallerPath);
 };

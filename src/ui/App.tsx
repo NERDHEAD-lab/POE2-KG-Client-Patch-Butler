@@ -66,7 +66,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
             setScreen('MAIN_MENU');
         }
     };
-    const [updateInfo, setUpdateInfo] = useState<{ url: string, version: string } | null>(null);
+    const [updateInfo, setUpdateInfo] = useState<{ url: string, version: string, updateType: 'installer' | 'portable' } | null>(null);
     const [isUpdating, setIsUpdating] = useState(false);
     const [downloadProgress, setDownloadProgress] = useState(0);
     const [initStatus, setInitStatus] = useState<'LOADING' | 'PROCESS_CHECK' | 'CONFIRM' | 'INPUT' | null>(null);
@@ -96,9 +96,12 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
     const handleUpdate = () => {
         if (updateInfo && !isUpdating) {
             setIsUpdating(true);
-            const tempPath = path.join(os.tmpdir(), `poe2-patch-butler-${updateInfo.version}.exe`);
+            const tempFileName = updateInfo.updateType === 'installer'
+                ? `poe2-patch-butler-setup-${updateInfo.version}.exe`
+                : `poe2-patch-butler-${updateInfo.version}.exe`;
+            const tempPath = path.join(os.tmpdir(), tempFileName);
 
-            logger.info(`업데이트 다운로드 및 적용 시작: v${updateInfo.version}`);
+            logger.info(`업데이트 다운로드 및 적용 시작: v${updateInfo.version} (${updateInfo.updateType})`);
 
             const doUpdate = async () => {
                 try {
@@ -111,7 +114,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
                     const { stopWatcherProcess } = await import('../utils/autoDetect.js');
                     await stopWatcherProcess();
 
-                    performSelfUpdate(tempPath);
+                    performSelfUpdate(tempPath, updateInfo.updateType);
                 } catch (e) {
                     logger.error('업데이트 실패: ' + e);
                     setIsUpdating(false);
@@ -279,7 +282,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
                     const res = await checkForUpdate();
                     if (res.hasUpdate && res.downloadUrl) {
                         logger.info(`새 업데이트 발견: v${res.latestVersion}`);
-                        setUpdateInfo({ url: res.downloadUrl, version: res.latestVersion });
+                        setUpdateInfo({ url: res.downloadUrl, version: res.latestVersion, updateType: res.updateType });
                         ctx.setVisible(true);
                         ctx.setStatus(<Text color="green">업데이트 ({appVersion} {'->'} {res.latestVersion})</Text>);
                     } else {

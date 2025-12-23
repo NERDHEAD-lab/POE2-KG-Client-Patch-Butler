@@ -5,7 +5,8 @@ const RELEASES_API = `https://api.github.com/repos/${GITHUB_REPO}/releases/lates
 
 export interface LatestVersionInfo {
     version: string;
-    downloadUrl: string | null;
+    portableUrl: string | null;
+    setupUrl: string | null;
     body: string;
 }
 
@@ -20,15 +21,21 @@ export const getLatestVersionInfo = async (): Promise<LatestVersionInfo | null> 
         const tagName = latestData.tag_name; // e.g., "v1.2.0"
         const cleanLatestVersion = tagName.replace(/^v/, '');
 
-        const asset = latestData.assets.find((a: any) =>
+        const portableAsset = latestData.assets.find((a: any) =>
             a.name.endsWith('.exe') &&
             !a.name.toLowerCase().includes('setup') &&
             !a.name.toLowerCase().includes('installer')
         );
 
+        const setupAsset = latestData.assets.find((a: any) =>
+            a.name.endsWith('.exe') &&
+            (a.name.toLowerCase().includes('setup') || a.name.toLowerCase().includes('installer'))
+        );
+
         return {
             version: cleanLatestVersion,
-            downloadUrl: asset ? asset.browser_download_url : null,
+            portableUrl: portableAsset ? portableAsset.browser_download_url : null,
+            setupUrl: setupAsset ? setupAsset.browser_download_url : null,
             body: latestData.body
         };
     } catch (error) {
@@ -42,7 +49,8 @@ export const getLatestVersionInfo = async (): Promise<LatestVersionInfo | null> 
 //     // TEST MODE: Hardcoded for testing self-update
 //     return {
 //         version: '99.99.99',
-//         downloadUrl: 'https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/releases/download/1.3.0-SNAPSHOT/poe2-patch-butler.exe',
-//         body: 'Testing Self Update - Hardcoded URL'
+//         portableUrl: 'https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/releases/download/1.4.0-SNAPSHOT/poe2-patch-butler.exe',
+//         setupUrl: 'https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/releases/download/1.4.0-SNAPSHOT/poe2-patch-butler-setup.exe',
+//         body: 'Testing Self Update - Hardcoded URL (1.4.0-SNAPSHOT)'
 //     };
 // };
