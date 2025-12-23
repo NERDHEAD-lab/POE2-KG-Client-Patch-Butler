@@ -67,5 +67,8 @@ Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChang
 Filename: "{sys}\taskkill.exe"; Parameters: "/F /IM {#MyAppExeName} /T"; Flags: runhidden; RunOnceId: "KillProcess"
 Filename: "{sys}\reg.exe"; Parameters: "delete ""HKCU\Software\Microsoft\Windows\CurrentVersion\Run"" /v ""POE2_Patch_Butler_Watch"" /f"; Flags: runhidden; RunOnceId: "DelRegKey"
 
+[Registry]
+Root: HKCU; Subkey: "Software\NERDHEAD LAB\POE2 Patch Butler"; ValueType: string; ValueName: "InstallVersion"; ValueData: "{#MyAppVersion}"; Flags: uninsdeletekey
+
 [UninstallDelete]
 Type: filesandordirs; Name: "{userappdata}\{#MyAppConfigName}"
