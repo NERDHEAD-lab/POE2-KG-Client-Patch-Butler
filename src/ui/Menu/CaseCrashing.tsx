@@ -1,11 +1,16 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Box, Text, useInput } from 'ink';
+import { logger } from '../../utils/logger.js';
 
 interface CaseCrashingProps {
     onGoBack: () => void;
 }
 
 const CaseCrashing: React.FC<CaseCrashingProps> = ({ onGoBack }) => {
+    useEffect(() => {
+        logger.info('진단 메뉴 진입: 게임 튕김 현상 (CaseCrashing)');
+    }, []);
+
     useInput((input, key) => {
         if (key.return || input === 'q' || input === 'Q') {
             onGoBack();

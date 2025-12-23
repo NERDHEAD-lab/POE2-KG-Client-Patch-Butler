@@ -1,5 +1,6 @@
 import semver from 'semver';
 import { getAppVersion, getLatestVersionInfo } from './version.js';
+import { logger } from './logger.js';
 
 export interface UpdateCheckResult {
     hasUpdate: boolean;
@@ -14,6 +15,7 @@ export const checkForUpdate = async (): Promise<UpdateCheckResult> => {
         const currentVersion = getAppVersion();
 
         if (!latestInfo) {
+            logger.warn('Failed to fetch latest version info.');
             return {
                 hasUpdate: false,
                 latestVersion: '0.0.0',
@@ -24,6 +26,7 @@ export const checkForUpdate = async (): Promise<UpdateCheckResult> => {
 
         // If current version is "unknown" (dev mode), assume no update
         if (currentVersion === 'unknown') {
+            logger.info('Dev mode detected (version unknown). Skipping update check.');
             return {
                 hasUpdate: false,
                 latestVersion: latestInfo.version,
@@ -33,6 +36,7 @@ export const checkForUpdate = async (): Promise<UpdateCheckResult> => {
         }
 
         if (semver.gt(latestInfo.version, currentVersion)) {
+            logger.info(`Update available: ${currentVersion} -> ${latestInfo.version}`);
             return {
                 hasUpdate: true,
                 latestVersion: latestInfo.version,
@@ -41,6 +45,7 @@ export const checkForUpdate = async (): Promise<UpdateCheckResult> => {
             };
         }
 
+        logger.info(`App is up to date (v${currentVersion}).`);
         return {
             hasUpdate: false,
             latestVersion: latestInfo.version,
@@ -48,6 +53,7 @@ export const checkForUpdate = async (): Promise<UpdateCheckResult> => {
             releaseNotes: ''
         };
     } catch (error) {
+        logger.error('Update check failed: ' + error);
         return {
             hasUpdate: false,
             latestVersion: '0.0.0',

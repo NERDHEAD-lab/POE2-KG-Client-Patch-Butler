@@ -53,12 +53,20 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
     const [initStatus, setInitStatus] = useState<'LOADING' | 'PROCESS_CHECK' | 'CONFIRM' | 'INPUT' | null>(null);
 
     React.useEffect(() => {
+        logger.info(`App Initialized (v${getAppVersion()})`);
+
         // Check for updates
         if (process.env.NODE_ENV !== 'development') {
+            logger.info('업데이트 확인 중...');
             checkForUpdate().then(res => {
                 if (res.hasUpdate && res.downloadUrl) {
+                    logger.info(`새 업데이트 발견: v${res.latestVersion}`);
                     setUpdateInfo({ url: res.downloadUrl, version: res.latestVersion });
+                } else {
+                    logger.info('최신 버전입니다.');
                 }
+            }).catch(e => {
+                logger.warn('업데이트 확인 실패: ' + e);
             });
         }
 
@@ -86,17 +94,22 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
             setIsUpdating(true);
             const tempPath = path.join(os.tmpdir(), `poe2-patch-butler-${updateInfo.version}.exe`);
 
+            logger.info(`업데이트 다운로드 및 적용 시작: v${updateInfo.version}`);
+
             const doUpdate = async () => {
                 try {
                     await downloadFile(updateInfo.url, tempPath, 'update.exe', (s) => {
                         setDownloadProgress(s.progress);
                     });
 
+                    logger.success('업데이트 다운로드 완료. Watcher 중지 및 자가 업데이트 진행.');
+
                     const { stopWatcherProcess } = await import('../utils/autoDetect.js');
                     await stopWatcherProcess();
 
                     performSelfUpdate(tempPath);
                 } catch (e) {
+                    logger.error('업데이트 실패: ' + e);
                     setIsUpdating(false);
                 }
             };
