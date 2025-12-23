@@ -3,7 +3,9 @@
 
 #define MyAppName "POE2 Patch Butler"
 #define MyAppConfigName "poe2-patch-butler"
-#define MyAppVersion "1.3.1"
+#ifndef MyAppVersion
+  #define MyAppVersion "1.0.0"
+#endif
 #define MyAppPublisher "NERDHEAD LAB"
 #define MyAppURL "https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler"
 #define MyAppExeName "poe2-patch-butler.exe"

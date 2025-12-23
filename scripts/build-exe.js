@@ -126,6 +126,7 @@ process.on('exit', () => {
                 innosetupCompiler(issPath, {
                     gui: false,
                     verbose: true,
+                    DMyAppVersion: version,
                 }, (error) => {
                     if (error) {
                         reject(error);
