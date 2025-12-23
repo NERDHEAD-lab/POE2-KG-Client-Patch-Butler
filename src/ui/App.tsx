@@ -305,7 +305,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
             {/* Main Layout: Row [Content | Sidebar] */}
             <Box flexDirection="row" flexGrow={1} alignItems="stretch">
                 {/* Main Content Info */}
-                <Box flexDirection="column" flexGrow={1}>
+                <Box flexDirection="column" width={Math.max(0, dimensions.columns - 34)}>
                     {/* Server Notice moved here */}
                     {serverNotice && (
                         <Box flexDirection="column" marginBottom={1}>
