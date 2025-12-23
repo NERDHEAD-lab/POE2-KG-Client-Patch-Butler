@@ -3,6 +3,7 @@ import { promisify } from 'util';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
+import { logger } from './logger.js';
 
 const execAsync = promisify(exec);
 
@@ -80,7 +81,7 @@ export const checkSingleInstance = async (isFixPatch: boolean): Promise<boolean>
         const { stdout } = await execAsync(`powershell -ExecutionPolicy Bypass -File "${tempScriptPath}"`, { windowsHide: true });
 
         if (stdout.includes('FOUND_AND_FOCUSED')) {
-            console.log('이미 실행중인 프로세스가 있습니다.'); // "Process already running."
+            logger.info('이미 실행중인 프로세스가 있습니다.'); // "Process already running."
             return false; // Should exit
         }
 

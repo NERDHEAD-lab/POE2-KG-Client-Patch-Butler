@@ -120,7 +120,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
             await disableAutoDetectRegistry();
             await stopWatcherProcess();
             setIsAutoDetectEnabled(false);
-            logger.log('자동 감지 기능을 껐습니다. (Watcher Stopped)', 'warn');
+            logger.warn('자동 감지 기능을 껐습니다. (Watcher Stopped)');
             return false;
         } else {
             // Turning ON
@@ -128,10 +128,10 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
                 await enableAutoDetectRegistry();
                 startWatcherProcess();
                 setIsAutoDetectEnabled(true);
-                logger.log('자동 감지 기능을 켰습니다. 업데이트 실패 시 자동으로 해결합니다.', 'success');
+                logger.success('자동 감지 기능을 켰습니다. 업데이트 실패 시 자동으로 해결합니다.');
                 return true;
             } catch (e) {
-                logger.log('자동 감지 설정 실패: ' + e, 'error');
+                logger.error('자동 감지 설정 실패: ' + e);
                 return false;
             }
         }

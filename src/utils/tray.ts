@@ -6,6 +6,7 @@ import EventEmitter from 'events';
 import crypto from 'crypto';
 import { spawn } from 'child_process';
 import { TRAY_APP_BASE64 } from '../generated/trayAppBase64.js';
+import { logger } from './logger.js';
 
 // --- Utils ---
 const attr = (name: string, val: any): string => {
@@ -232,7 +233,7 @@ export class Tray extends EventEmitter {
 
     setMenu(...items: Item[]) {
         if (!this.client) {
-            console.warn('Tray: Client not connected, skipping setMenu');
+            logger.warn('Tray: Client not connected, skipping setMenu');
             return;
         }
         let payload = XML_HEAD;

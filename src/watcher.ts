@@ -9,6 +9,7 @@ import Tray from './utils/tray.js';
 import { ICON_BASE64 } from './generated/iconBase64.js';
 import { TRAY_APP_BASE64 } from './generated/trayAppBase64.js';
 import { getAppDataDirectory } from './utils/config.js';
+import { logger } from './utils/logger.js';
 
 // Keep tray in global scope to prevent garbage collection
 let tray: any = null;
@@ -54,64 +55,15 @@ const setupTray = async () => {
 
         const quitItem = await tray.item("종료 (Quit)", {
             action: () => {
-                console.log("Quitting via Tray...");
+                logger.info("Quitting via Tray...");
                 process.exit(0);
             }
         });
 
         tray.setMenu(openItem, quitItem);
     } catch (e) {
-        console.error("Failed to initialize system tray:", e);
+        logger.error("Failed to initialize system tray: " + e);
     }
-};
-
-export const startWatcher = async () => {
-    console.log('Starting POE2 Launcher Watcher...');
-    await setupTray();
-
-    let isRunning = false;
-    let startTime: number | null = null;
-
-    // Poll every 5 seconds
-    setInterval(async () => {
-        const currentlyRunning = await isProcessRunning('POE2_Launcher.exe');
-
-        if (currentlyRunning && !isRunning) {
-            // Process started
-            console.log('POE2_Launcher started.');
-            isRunning = true;
-            startTime = Date.now();
-        } else if (!currentlyRunning && isRunning) {
-            // Process ended
-            console.log('POE2_Launcher ended.');
-            isRunning = false;
-
-            if (startTime) {
-                const duration = Date.now() - startTime;
-                const minutes = duration / 1000 / 60;
-
-                console.log(`Duration: ${minutes.toFixed(2)} minutes`);
-
-                if (minutes < 5) {
-                    console.log('Short session detected. Checking logs...');
-                    // Check logs
-                    try {
-                        const logResult = await checkLogForErrors();
-                        if (logResult.hasError) {
-                            console.log('Error detected in logs!');
-                            // Trigger alert
-                            await triggerAlert();
-                        } else {
-                            console.log('No error found in logs.');
-                        }
-                    } catch (e) {
-                        console.error('Failed to check logs:', e);
-                    }
-                }
-            }
-            startTime = null;
-        }
-    }, 5000);
 };
 
 const triggerAlert = (): Promise<void> => {
@@ -119,7 +71,7 @@ const triggerAlert = (): Promise<void> => {
         // PowerShell script to show Yes/No dialog
         const psScript = "Add-Type -AssemblyName PresentationCore,PresentationFramework; $Result = [System.Windows.MessageBox]::Show('POE2 업데이트 실패가 감지되었습니다. 오류 해결 마법사를 진행 하겠습니까?', 'POE2 Patch Butler', 'YesNo', 'Warning', [System.Windows.MessageBoxResult]::No, [System.Windows.MessageBoxOptions]::DefaultDesktopOnly); if ($Result -eq 'Yes') { exit 0 } else { exit 1 }";
 
-        console.log('Forcing alert for testing...');
+        logger.info('Forcing alert for testing...');
 
         // Use spawn to avoid shell escaping issues and better handle execution
         const child = spawn('powershell', ['-Command', psScript], {
@@ -129,7 +81,7 @@ const triggerAlert = (): Promise<void> => {
         child.on('close', (code: number) => {
             if (code === 0) {
                 // Yes
-                console.log('User accepted fix. Launching Butler...');
+                logger.info('User accepted fix. Launching Butler...');
                 const exePath = process.execPath;
                 // Use 'start' command to ensure a new console window is created
                 const startArgs = ['/c', 'start', 'POE2 Patch Butler', exePath, '--fix-patch'];
@@ -143,14 +95,63 @@ const triggerAlert = (): Promise<void> => {
                 resolve();
             } else {
                 // No or error
-                console.log('User declined or error code:', code);
+                logger.info('User declined or error code: ' + code);
                 resolve(); // Resolve anyway to continue watching
             }
         });
 
         child.on('error', (err: Error) => {
-            console.error('Failed to spawn alert:', err);
+            logger.error('Failed to spawn alert: ' + err);
             reject(err);
         });
     });
+};
+
+export const startWatcher = async () => {
+    logger.info('Starting POE2 Launcher Watcher...');
+    await setupTray();
+
+    let isRunning = false;
+    let startTime: number | null = null;
+
+    // Poll every 5 seconds
+    setInterval(async () => {
+        const currentlyRunning = await isProcessRunning('POE2_Launcher.exe');
+
+        if (currentlyRunning && !isRunning) {
+            // Process started
+            logger.info('POE2_Launcher started.');
+            isRunning = true;
+            startTime = Date.now();
+        } else if (!currentlyRunning && isRunning) {
+            // Process ended
+            logger.info('POE2_Launcher ended.');
+            isRunning = false;
+
+            if (startTime) {
+                const duration = Date.now() - startTime;
+                const minutes = duration / 1000 / 60;
+
+                logger.info(`Duration: ${minutes.toFixed(2)} minutes`);
+
+                if (minutes < 5) {
+                    logger.info('Short session detected. Checking logs...');
+                    // Check logs
+                    try {
+                        const logResult = await checkLogForErrors();
+                        if (logResult.hasError) {
+                            logger.warn('Error detected in logs!');
+                            // Trigger alert
+                            await triggerAlert();
+                        } else {
+                            logger.info('No error found in logs.');
+                        }
+                    } catch (e) {
+                        logger.error('Failed to check logs: ' + e);
+                    }
+                }
+            }
+            startTime = null;
+        }
+    }, 5000);
 };

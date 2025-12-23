@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import { promisify } from 'util';
 import { getConfigDirectory } from './config.js';
+import { logger } from './logger.js';
 
 const execAsync = promisify(exec);
 
@@ -86,7 +87,7 @@ export const stopWatcherProcess = async (): Promise<void> => {
     try {
         await execAsync(`powershell -Command "${psCommand}"`, { windowsHide: true });
     } catch (e) {
-        console.error('Failed to stop watcher process:', e);
+        logger.error('Failed to stop watcher process: ' + e);
     }
 };
 

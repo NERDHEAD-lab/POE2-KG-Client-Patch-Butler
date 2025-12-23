@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { getLastMigratedVersion, setLastMigratedVersion } from './config.js';
 import { isAutoDetectRegistryEnabled, disableAutoDetectRegistry, enableAutoDetectRegistry } from './autoDetect.js';
+import { logger } from './logger.js';
 
 interface Migration {
     version: string;
@@ -28,7 +29,7 @@ const migrations: Migration[] = [
             try {
                 fs.rmSync(oldPath, { recursive: true, force: true });
             } catch (e) {
-                console.error('Failed to remove legacy config folder:', e);
+                logger.error('Failed to remove legacy config folder: ' + e);
             }
         }
     },
@@ -59,7 +60,7 @@ const migrations: Migration[] = [
 
                 await enableAutoDetectRegistry();
             } catch (e) {
-                console.error('Failed to migrate VBS location:', e);
+                logger.error('Failed to migrate VBS location: ' + e);
             }
         }
     }
@@ -84,7 +85,7 @@ export const runMigrations = async () => {
             await migration.run();
             setLastMigratedVersion(migration.version);
         } catch (e) {
-            console.error(`Migration ${migration.version} failed:`, e);
+            logger.error(`Migration ${migration.version} failed: ${e}`);
             throw e;
         }
     }

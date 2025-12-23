@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { spawn } from 'child_process';
+import { logger } from './logger.js';
 
 /**
  * Creates a temporary batch script to replace the current executable with the new one.
@@ -44,7 +45,7 @@ del "%~f0"
         // Exit immediately to allow the file to be overwritten
         process.exit(0);
     } catch (err) {
-        console.error('Failed to start self-update:', err);
+        logger.error('Failed to start self-update: ' + err);
         throw err;
     }
 };
