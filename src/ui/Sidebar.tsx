@@ -131,7 +131,7 @@ const Sidebar: React.FC<SidebarProps> = ({ items, isActive }) => {
                             <Box key={index} flexDirection="row">
                                 <Box width={6}>
                                     {config.keyChar ? (
-                                        <Text>[<Text color="yellow">{config.keyChar}</Text>]</Text>
+                                        <Text>[<Text color="cyan">{config.keyChar}</Text>]</Text>
                                     ) : (
                                         <Text> </Text>
                                     )}

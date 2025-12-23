@@ -281,7 +281,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
                         logger.info(`새 업데이트 발견: v${res.latestVersion}`);
                         setUpdateInfo({ url: res.downloadUrl, version: res.latestVersion });
                         ctx.setVisible(true);
-                        ctx.setStatus(<Text color="green">업데이트 가능!</Text>);
+                        ctx.setStatus(<Text color="green">업데이트 ({appVersion} {'->'} {res.latestVersion})</Text>);
                     } else {
                         logger.info('최신 버전입니다.');
                     }
