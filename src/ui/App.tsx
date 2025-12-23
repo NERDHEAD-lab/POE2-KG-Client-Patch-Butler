@@ -9,6 +9,7 @@ import CaseCrashing from './Menu/CaseCrashing.js';
 import CaseReportIssue from './Menu/CaseReportIssue.js';
 import Sidebar from './Sidebar.js';
 import OutputBox from './OutputBox.js';
+import RainbowText from './RainbowText.js';
 import { getAppVersion } from '../utils/version.js';
 import { getBackupEnabled, setBackupEnabled } from '../utils/config.js';
 import { checkForUpdate } from '../utils/updater.js';
@@ -276,7 +277,8 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
         <Box flexDirection="column" padding={1} minHeight={stdout?.rows}>
             {/* Header */}
             <Box flexDirection="column" marginBottom={1}>
-                <Text color="yellow">POE2 카카오게임즈 클라이언트 오류 해결 마법사 v{appVersion}</Text>
+                {/* Rainbow Title */}
+                <RainbowText>POE2 카카오게임즈 클라이언트 오류 해결 마법사 v{appVersion}</RainbowText>
 
                 {/* Server Notice */}
 
