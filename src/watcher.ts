@@ -1,6 +1,6 @@
 import { spawn } from 'child_process';
 import os from 'os';
-import { isProcessRunning } from './utils/process.js';
+import { getProcessInfo } from './utils/process.js';
 import { checkLogForErrors } from './utils/logParser.js';
 import fs from 'fs';
 import path from 'path';
@@ -109,6 +109,47 @@ const triggerAlert = (): Promise<void> => {
 
 export const startWatcher = async () => {
     logger.info('Starting POE2 Launcher Watcher...');
+
+    const pidFile = path.join(getAppDataDirectory(), '.watcher_pid');
+
+    // Check for existing watcher instance
+    try {
+        if (fs.existsSync(pidFile)) {
+            const oldPid = parseInt(fs.readFileSync(pidFile, 'utf8').trim());
+            if (oldPid && oldPid !== process.pid) {
+                try {
+                    process.kill(oldPid, 0); // Check if process exists
+                    // If no error, process is running
+                    logger.info(`Another watcher is already running (PID: ${oldPid}). Exiting.`);
+                    process.exit(0);
+                } catch (e: any) {
+                    if (e.code === 'EPERM') {
+                        // Process exists but no permission (e.g. User checking Admin)
+                        logger.info(`Another watcher is running (PID: ${oldPid}) [EPERM]. Exiting.`);
+                        process.exit(0);
+                    }
+                    // ESRCH: Process not found, assume stale PID file and continue.
+                    logger.info('Found stale PID file. Overwriting...');
+                }
+            }
+        }
+    } catch (e) {
+        logger.error('Error checking existing watcher: ' + e);
+        // Fallback: Continue just in case
+    }
+
+    try {
+        fs.writeFileSync(pidFile, String(process.pid), 'utf8');
+    } catch (e) {
+        logger.error('Failed to write PID file: ' + e);
+    }
+
+    process.on('exit', () => {
+        try {
+            if (fs.existsSync(pidFile)) fs.unlinkSync(pidFile);
+        } catch { }
+    });
+
     await setupTray();
 
     let isRunning = false;
@@ -116,13 +157,26 @@ export const startWatcher = async () => {
 
     // Poll every 5 seconds
     setInterval(async () => {
-        const currentlyRunning = await isProcessRunning('POE2_Launcher.exe');
+        const processInfo = await getProcessInfo('POE2_Launcher.exe');
+        const currentlyRunning = !!processInfo;
+        logger.info(`POE2_Launcher is running: ${currentlyRunning}`);
+        logger.info(`Process info: ${processInfo}`);
 
         if (currentlyRunning && !isRunning) {
             // Process started
             logger.info('POE2_Launcher started.');
             isRunning = true;
             startTime = Date.now();
+
+            if (processInfo && processInfo.commandLine) {
+                try {
+                    const argsFile = path.join(getAppDataDirectory(), '.launcher_args');
+                    fs.writeFileSync(argsFile, processInfo.commandLine, 'utf8');
+                    logger.info(`Recorded launch arguments: ${processInfo.commandLine}`);
+                } catch (e) {
+                    logger.error('Failed to save launch args: ' + e);
+                }
+            }
         } else if (!currentlyRunning && isRunning) {
             // Process ended
             logger.info('POE2_Launcher ended.');

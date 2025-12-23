@@ -70,6 +70,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
     const [isUpdating, setIsUpdating] = useState(false);
     const [downloadProgress, setDownloadProgress] = useState(0);
     const [initStatus, setInitStatus] = useState<'LOADING' | 'PROCESS_CHECK' | 'CONFIRM' | 'INPUT' | null>(null);
+    const hasEnsuredWatcher = React.useRef(false);
 
     React.useEffect(() => {
         logger.info(`App Initialized (v${getAppVersion()})`);
@@ -111,7 +112,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
 
                     logger.success('업데이트 다운로드 완료. Watcher 중지 및 자가 업데이트 진행.');
 
-                    const { stopWatcherProcess } = await import('../utils/autoDetect.js');
+                    const { stopWatcherProcess } = await import('../utils/autoDetectWithTask.js');
                     await stopWatcherProcess();
 
                     performSelfUpdate(tempPath, updateInfo.updateType);
@@ -131,44 +132,109 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
 
     // Auto-detect toggle
     const [isAutoDetectEnabled, setIsAutoDetectEnabled] = useState(false);
+    const [isAdminDetectEnabled, setIsAdminDetectEnabled] = useState(false);
 
     const toggleAutoDetect = async () => {
-        const { enableAutoDetectRegistry, disableAutoDetectRegistry, startWatcherProcess, stopWatcherProcess } = await import('../utils/autoDetect.js');
+        const TaskDetect = await import('../utils/autoDetectWithTask.js');
+        const RegDetect = await import('../utils/autoDetectWithRegistry.js');
+
+        const { stopWatcherProcess } = TaskDetect; // Smart stop works for both
 
         if (isAutoDetectEnabled) {
             // Turning OFF
-            await disableAutoDetectRegistry();
+            // Only disable Task if it is actually enabled (prevents unnecessary UAC)
+            if (await TaskDetect.isAutoDetectTaskEnabled()) {
+                await TaskDetect.disableAutoDetectTask();
+            }
+            // Always try to disable registry
+            await RegDetect.disableAutoDetectRegistry();
+
             await stopWatcherProcess();
+
             setIsAutoDetectEnabled(false);
             logger.warn('자동 감지 기능을 껐습니다. (Watcher Stopped)');
             return false;
         } else {
             // Turning ON
             try {
-                await enableAutoDetectRegistry();
-                startWatcherProcess();
+                if (isAdminDetectEnabled) {
+                    await TaskDetect.enableAutoDetectTask();
+                    logger.success('자동 감지 기능을 켰습니다. (관리자 권한 - Task Scheduler)');
+                } else {
+                    await RegDetect.enableAutoDetectRegistry();
+                    RegDetect.startWatcherProcessRegistry(); // Registry mode needs explicit start call usually? 
+                    // RegDetect.enable defines registry key. We also need to start process if not running.
+                    logger.success('자동 감지 기능을 켰습니다. (일반 권한 - Registry)');
+                }
                 setIsAutoDetectEnabled(true);
-                logger.success('자동 감지 기능을 켰습니다. 업데이트 실패 시 자동으로 해결합니다.');
                 return true;
             } catch (e) {
-                logger.error('자동 감지 설정 실패: ' + e);
+                const errStr = String(e);
+                logger.error(`설정 실패: ${errStr}`);
+                if (isAdminDetectEnabled) {
+                    logger.error('관리자 권한 설정을 실패했습니다. 권한 요청을 수락했는지 확인하세요.');
+                }
                 return false;
             }
         }
     };
 
+    const toggleAdminDetect = async () => {
+        const TaskDetect = await import('../utils/autoDetectWithTask.js');
+        const RegDetect = await import('../utils/autoDetectWithRegistry.js');
+        const { stopWatcherProcess } = TaskDetect;
+
+        const newAdminState = !isAdminDetectEnabled;
+        setIsAdminDetectEnabled(newAdminState);
+
+        // If Auto Detect is currently ON, we need to switch implementation immediately
+        if (isAutoDetectEnabled) {
+            try {
+                const isTaskCurrentlyEnabled = await TaskDetect.isAutoDetectTaskEnabled();
+
+                if (newAdminState) {
+                    // Switch to Admin (Task)
+                    // If we were using Registry, stop it first.
+                    if (!isTaskCurrentlyEnabled) {
+                        await stopWatcherProcess(false); // User kill, skip UAC if Admin
+                        await RegDetect.disableAutoDetectRegistry();
+                    }
+                    await TaskDetect.enableAutoDetectTask();
+                    logger.success('자동 감지 모드 변경: 관리자 권한 (Task Scheduler)');
+                } else {
+                    // Switch to User (Registry)
+                    // If we were using Task, disable it (triggers UAC and kills process)
+                    if (isTaskCurrentlyEnabled) {
+                        await TaskDetect.disableAutoDetectTask();
+                    } else {
+                        await stopWatcherProcess();
+                    }
+
+                    await RegDetect.enableAutoDetectRegistry();
+                    RegDetect.startWatcherProcessRegistry();
+                    logger.success('자동 감지 모드 변경: 일반 권한 (Registry)');
+                }
+            } catch (e) {
+                logger.error('모드 변경 실패: ' + e);
+                // Revert state if failed? For now just log.
+            }
+        } else {
+            logger.info(`자동 감지 모드 설정 변경: ${newAdminState ? '관리자 권한' : '일반 권한'} (기능이 켜질 때 적용됩니다)`);
+        }
+        return newAdminState;
+    };
+
     useInput((input, key) => {
-        // Only handle Global inputs if any (None for now, Sidebar handles its own)
+        // Only handle Global inputs if any
     });
 
     const getDayCount = () => {
-        // 최초 버그 발생일
-        // ref: https://kakaogames.oqupie.com/portal/2881/article/73761
+        // ... same ...
         const startDate = new Date('2024-12-07');
         const today = new Date();
         const diffTime = today.getTime() - startDate.getTime();
         const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-        return diffDays + 1; // 1일차 시작
+        return diffDays + 1;
     };
 
     const handleMenuSelect = (option: number) => {
@@ -181,6 +247,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
     };
 
     const renderBody = () => {
+        // ... same ...
         if (isUpdating) {
             return (
                 <Box flexDirection="column" alignItems="center" justifyContent="center">
@@ -196,7 +263,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
             case 'MAIN_MENU':
                 return <MainMenu onSelect={handleMenuSelect} onExit={exit} />;
             case 'CASE_1':
-                return <CasePatchFailed installPath={installPath} onGoBack={() => setScreen('MAIN_MENU')} onExit={exit} />;
+                return <CasePatchFailed installPath={installPath} onGoBack={() => setScreen('MAIN_MENU')} onExit={exit} isAutoFix={initialMode === 'FIX_PATCH'} />;
             case 'CASE_2':
                 return <CaseExecuteFailed installPath={installPath} onGoBack={() => setScreen('MAIN_MENU')} onExit={exit} />;
             case 'CASE_3':
@@ -213,19 +280,75 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
     const sidebarItems: any[] = [
         {
             keyChar: 'A',
-            description: '오류 자동 감지:',
+            description: '오류 자동 감지',
             initialStatus: <Text color="gray"> Checking...</Text>,
             onInit: async (ctx: any) => {
-                const enabled = await import('../utils/autoDetect.js').then(m => m.isAutoDetectRegistryEnabled());
+                const TaskDetect = await import('../utils/autoDetectWithTask.js');
+                const RegDetect = await import('../utils/autoDetectWithRegistry.js');
+
+                const isTask = await TaskDetect.isAutoDetectTaskEnabled();
+                const isReg = await RegDetect.isAutoDetectRegistryEnabled();
+
+                const enabled = isTask || isReg;
+                const isAdmin = isTask; // If task is on, we are in admin mode (or both, but task takes precedence)
+
                 setIsAutoDetectEnabled(enabled);
+                setIsAdminDetectEnabled(isAdmin);
+
                 ctx.setStatus(enabled ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>);
+
                 if (enabled) {
-                    import('../utils/autoDetect.js').then(m => m.restartWatcher());
+                    if (isTask) {
+                        if (!hasEnsuredWatcher.current) {
+                            hasEnsuredWatcher.current = true;
+                            TaskDetect.ensureWatcherRunningTask();
+                        }
+                    } else {
+                        // For registry, we just ensure process is running if we want to be robust
+                        // But startWatcherProcessRegistry launches it. 
+                        // We can check isWatcherRunning (from TaskDetect which checks PID file)
+                        const running = await TaskDetect.isWatcherRunning();
+                        if (!running) {
+                            RegDetect.startWatcherProcessRegistry();
+                        }
+                    }
                 }
             },
             onClick: async (ctx: any) => {
                 const newState = await toggleAutoDetect();
                 ctx.setStatus(newState ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>);
+            }
+        },
+        {
+            keyChar: 'T',
+            description: '패치 후 자동실행(관리자 권한)',
+            isChild: true,
+            initialStatus: <Text color="gray"> Checking...</Text>,
+            onInit: async (ctx: any) => {
+                // Wait for State init usually? But Sidebar items init in parallel or order?
+                // We can rely on the state we JUST set in A? initialization might be async race.
+                // Safest to re-check or wait. Effect updates state.
+                // However, `onInit` here is called by Sidebar component once.
+                // Let's just check the state or re-derive.
+                // Since we haven't rendered yet, state might not be flush.
+                // But we can check the same logic or just default false and let Render update?
+                // Ideally Sidebar shouldn't rely on React State for its internal printed status if it's separate?
+                // But `ctx.setStatus` updates the UI.
+
+                // Let's re-derive quickly to be safe/consistent
+                const TaskDetect = await import('../utils/autoDetectWithTask.js');
+                const isTask = await TaskDetect.isAutoDetectTaskEnabled();
+                // If Task is enabled, then Admin Mode is effectively ON.
+                // If neither is enabled, we default to FALSE (User preference default).
+                // But user wants "Default to Registry" (User mode). So Admin Mode = False by default.
+
+                // If Task is enable -> Admin Mode True.
+                // Else -> False.
+                ctx.setStatus(isTask ? <Text color="green"> ON</Text> : <Text color="gray"> OFF</Text>);
+            },
+            onClick: async (ctx: any) => {
+                const newState = await toggleAdminDetect();
+                ctx.setStatus(newState ? <Text color="green"> ON</Text> : <Text color="gray"> OFF</Text>);
             }
         },
         {

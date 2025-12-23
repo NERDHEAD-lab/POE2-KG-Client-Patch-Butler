@@ -3,13 +3,17 @@ import { Box, Text, useInput } from 'ink';
 import { parseLog, LogParseResult, generateForcePatchResult } from '../../utils/logParser.js';
 import { downloadFiles, cleanupTempDir } from '../../utils/downloader.js';
 import path from 'path';
+import fs from 'fs';
 import { ProgressBar } from '../ProgressBar.js';
 import { PathInput } from '../PathInput.js';
+import { getAppDataDirectory } from '../../utils/config.js';
+import { launchWithArgs } from '../../utils/launcher.js';
 
 interface CasePatchFailedProps {
     installPath: string;
     onGoBack: () => void;
     onExit: () => void;
+    isAutoFix?: boolean;
 }
 
 type Step = 'ANALYZING' | 'CONFIRM_FORCE' | 'READY_TO_DOWNLOAD' | 'EDIT_WEBROOT' | 'DOWNLOADING' | 'DONE' | 'ERROR';
@@ -20,7 +24,7 @@ const extractVersion = (url: string | null): string | null => {
     return match ? match[1] : null;
 };
 
-const CasePatchFailed: React.FC<CasePatchFailedProps> = ({ installPath, onGoBack, onExit }) => {
+const CasePatchFailed: React.FC<CasePatchFailedProps> = ({ installPath, onGoBack, onExit, isAutoFix = false }) => {
     const [step, setStep] = useState<Step>('ANALYZING');
     const [error, setError] = useState<string>('');
     const [logResult, setLogResult] = useState<LogParseResult | null>(null);
@@ -28,6 +32,21 @@ const CasePatchFailed: React.FC<CasePatchFailedProps> = ({ installPath, onGoBack
     const [downloadResult, setDownloadResult] = useState<{ success: boolean; failures: { fileName: string; error: Error }[] } | null>(null);
     const [cleanupStatus, setCleanupStatus] = useState<'pending' | 'cleaning' | 'done' | 'kept'>('pending');
     const [editWebRoot, setEditWebRoot] = useState<string>('');
+    const [relaunchArgs, setRelaunchArgs] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!isAutoFix) return;
+
+        try {
+            const argsPath = path.join(getAppDataDirectory(), '.launcher_args');
+            if (fs.existsSync(argsPath)) {
+                const content = fs.readFileSync(argsPath, 'utf8');
+                if (content && content.trim().length > 0) {
+                    setRelaunchArgs(content.trim());
+                }
+            }
+        } catch { }
+    }, [isAutoFix]);
 
     useEffect(() => {
         if (step === 'ANALYZING') {
@@ -131,6 +150,10 @@ const CasePatchFailed: React.FC<CasePatchFailedProps> = ({ installPath, onGoBack
                     cleanupTempDir(installPath).then(() => setCleanupStatus('done'));
                 } else if (input === 'q' || input === 'Q' || input === 'n' || input === 'N' || key.escape) {
                     setCleanupStatus('kept');
+                    } else if ((input === 'r' || input === 'R') && relaunchArgs) {
+                        // Relaunch
+                        launchWithArgs(relaunchArgs);
+                        onExit(); // Exit butler after launching? Yes.
                 }
             } else {
                 if (input || key.return || key.escape || key.backspace || key.delete) {
@@ -231,7 +254,14 @@ const CasePatchFailed: React.FC<CasePatchFailedProps> = ({ installPath, onGoBack
                     )}
                     <Box marginTop={1} flexDirection="column">
                         {cleanupStatus === 'pending' && (
-                            <Text color="cyan">임시 폴더(.patch_temp)와 다운로드된 파일을 삭제하시겠습니까? (<Text bold color="yellow">Enter</Text>: 삭제 / <Text bold color="yellow">Q</Text>: 보존)</Text>
+                            <Box flexDirection="column">
+                                <Text color="cyan">임시 폴더(.patch_temp)와 다운로드된 파일을 삭제하시겠습니까? (<Text bold color="yellow">Enter</Text>: 삭제 / <Text bold color="yellow">Q</Text>: 보존)</Text>
+                                {relaunchArgs && (
+                                    <Box marginTop={1}>
+                                        <Text>게임을 다시 실행하려면 <Text bold color="green">R</Text>을 누르세요. (원래 실행 인자 사용)</Text>
+                                    </Box>
+                                )}
+                            </Box>
                         )}
                         {cleanupStatus === 'cleaning' && <Text color="yellow">청소 중...</Text>}
                         {cleanupStatus === 'done' && (

@@ -2,7 +2,6 @@ import semver from 'semver';
 import fs from 'fs';
 import path from 'path';
 import { getLastMigratedVersion, setLastMigratedVersion } from './config.js';
-import { isAutoDetectRegistryEnabled, disableAutoDetectRegistry, enableAutoDetectRegistry } from './autoDetect.js';
 import { logger } from './logger.js';
 
 interface Migration {
@@ -37,30 +36,46 @@ const migrations: Migration[] = [
         version: '1.3.1',
         description: 'Move silent_launcher.vbs from executable dir to AppData',
         run: async () => {
-            const exeDir = path.dirname(process.execPath);
-            const VBS_NAME = 'silent_launcher.vbs';
-            const oldVbsPath = path.join(exeDir, VBS_NAME);
-
-            if (!fs.existsSync(oldVbsPath)) {
-                return;
-            }
-
             try {
-                const isEnabled = await isAutoDetectRegistryEnabled();
-                if (!isEnabled) {
-                    fs.unlinkSync(oldVbsPath);
+                const fs = await import('fs');
+                const path = await import('path');
+                // Check for old VBS in executable directory
+                const appPath = path.dirname(process.execPath);
+                const oldVbsPath = path.join(appPath, 'silent_launcher.vbs');
+
+                if (!fs.existsSync(oldVbsPath)) {
+                    // Nothing to do if old file doesn't exist
                     return;
                 }
 
-                await disableAutoDetectRegistry();
-
-                if (fs.existsSync(oldVbsPath)) {
+                // Check if Admin Task is enabled (New Feature)
+                const { isAutoDetectTaskEnabled } = await import('./autoDetectWithTask.js');
+                if (await isAutoDetectTaskEnabled()) {
+                    // If Admin Task is enabled, we don't need VBS or Registry auto-start. 
+                    // Just delete the old file to clean up.
                     fs.unlinkSync(oldVbsPath);
+                    logger.info('Migration 1.3.1: Removed legacy VBS (Admin Task is enabled).');
+                    return;
                 }
 
-                await enableAutoDetectRegistry();
+                // If Admin Task is NOT enabled, check Registry status
+                const { isAutoDetectRegistryEnabled, enableAutoDetectRegistry, disableAutoDetectRegistry } = await import('./autoDetectWithRegistry.js');
+
+                const isRegistryEnabled = await isAutoDetectRegistryEnabled();
+
+                // Remove the old file first (we will recreate it in valid location if needed)
+                fs.unlinkSync(oldVbsPath);
+                logger.info('Migration 1.3.1: Removed legacy VBS from executable dir.');
+
+                if (isRegistryEnabled) {
+                    // If it was enabled, re-enable it to ensure it uses the new VBS location/logic
+                    await disableAutoDetectRegistry(); // Clean old/broken registry pointing to old path
+                    await enableAutoDetectRegistry();  // Set up new VBS in ConfigDir
+                    logger.info('Migration 1.3.1: Migrated registry auto-detect to new VBS location.');
+                }
+
             } catch (e) {
-                logger.error('Failed to migrate VBS location: ' + e);
+                logger.error('Migration 1.3.1 failed: ' + e);
             }
         },
     },
@@ -116,7 +131,7 @@ const migrations: Migration[] = [
 
                 logger.success('마이그레이션 다운로드 완료. Watcher 중지 및 설치 프로그램 재시작...');
 
-                const { stopWatcherProcess } = await import('./autoDetect.js');
+                const { stopWatcherProcess } = await import('./autoDetectWithTask.js');
                 await stopWatcherProcess();
 
                 performSelfUpdate(tempPath, 'installer');

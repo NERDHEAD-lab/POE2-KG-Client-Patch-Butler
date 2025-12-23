@@ -36,3 +36,14 @@ export function runPackCheck(installPath: string): Promise<void> {
         });
     });
 }
+
+export function launchWithArgs(commandLine: string): void {
+    logger.info(`Relaunching game with command: ${commandLine}`);
+    const child = spawn(commandLine, {
+        detached: true,
+        stdio: 'ignore',
+        shell: true,
+        windowsHide: false
+    });
+    child.unref();
+}
