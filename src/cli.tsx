@@ -29,11 +29,14 @@ const cli = meow(`
 	importMeta: import.meta,
 });
 
+import { logger } from './utils/logger.js';
+
 // Run migrations before anything else
 import { runMigrations } from './utils/migrations.js';
 await runMigrations();
 
 if (cli.flags.watch) {
+	logger.setSuffix('watcher');
 	startWatcher();
 } else {
 	// Check for existing instance (Close others if fix-patch, else Focus existing)

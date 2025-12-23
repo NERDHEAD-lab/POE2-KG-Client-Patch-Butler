@@ -16,14 +16,21 @@ interface LogEvent {
     duration?: number;
 }
 
-class Logger extends EventEmitter {
+export class Logger extends EventEmitter {
     private logDir: string;
+    private suffix: string;
 
-    constructor() {
+    constructor(suffix: string = 'application') {
         super();
+        this.suffix = suffix;
         this.logDir = path.join(getAppDataDirectory(), 'logs');
         this.ensureLogDir();
         this.rotateLogs();
+    }
+
+    public setSuffix(suffix: string) {
+        this.suffix = suffix;
+        this.rotateLogs(); // Rotate logs for the new suffix to ensure cleanup
     }
 
     private ensureLogDir() {
@@ -42,15 +49,20 @@ class Logger extends EventEmitter {
         const year = now.getFullYear();
         const month = String(now.getMonth() + 1).padStart(2, '0');
         const day = String(now.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}.log`;
+
+        return `${year}-${month}-${day}-${this.suffix}.log`;
     }
 
     private rotateLogs() {
         try {
             if (!fs.existsSync(this.logDir)) return;
 
+            // Filter files that match the current suffix pattern
+            // YYYY-MM-DD-application.log or YYYY-MM-DD-watcher.log
+            const pattern = new RegExp(`^\\d{4}-\\d{2}-\\d{2}-${this.suffix}\\.log$`);
+
             const files = fs.readdirSync(this.logDir)
-                .filter(file => file.match(/^\d{4}-\d{2}-\d{2}\.log$/))
+                .filter(file => file.match(pattern))
                 .sort(); // Alphabetical sort works for YYYY-MM-DD
 
             if (files.length > LOG_RETENTION_DAYS) {
