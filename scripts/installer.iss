@@ -3,7 +3,7 @@
 
 #define MyAppName "POE2 Patch Butler"
 #define MyAppConfigName "poe2-patch-butler"
-#define MyAppVersion "1.1.0"
+#define MyAppVersion "1.3.1"
 #define MyAppPublisher "NERDHEAD LAB"
 #define MyAppURL "https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler"
 #define MyAppExeName "poe2-patch-butler.exe"
@@ -32,6 +32,8 @@ DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
 ; Remove the following line to run in administrative install mode (install for all users.)
 PrivilegesRequired=lowest
+CloseApplications=force
+RestartApplications=no
 OutputDir=..\dist
 OutputBaseFilename=poe2-patch-butler-setup
 SetupIconFile=..\assets\icon.ico
@@ -58,6 +60,10 @@ Name: "{userappdata}\Microsoft\Internet Explorer\Quick Launch\{#MyAppName}"; Fil
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
+
+[UninstallRun]
+Filename: "{sys}\taskkill.exe"; Parameters: "/F /IM {#MyAppExeName} /T"; Flags: runhidden; RunOnceId: "KillProcess"
+Filename: "{sys}\reg.exe"; Parameters: "delete ""HKCU\Software\Microsoft\Windows\CurrentVersion\Run"" /v ""POE2_Patch_Butler_Watch"" /f"; Flags: runhidden; RunOnceId: "DelRegKey"
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{userappdata}\{#MyAppConfigName}"
