@@ -3,39 +3,16 @@ import { promisify } from 'util';
 
 const execAsync = promisify(exec);
 
-export interface ProcessInfo {
-    name: string;
-    pid: number;
-    commandLine: string;
-}
-
-export const getProcessInfo = async (processName: string): Promise<ProcessInfo | null> => {
-    try {
-        const cmd = `wmic process where "name='${processName}'" get commandline,processid /format:csv`;
-        const { stdout } = await execAsync(cmd, { windowsHide: true });
-
-        const lines = stdout.trim().split(/\r?\n/).filter(line => line.trim().length > 0);
-        if (lines.length < 2) return null;
-
-        for (const line of lines) {
-            if (line.toLowerCase().startsWith('node')) continue;
-
-            const match = line.match(/^([^,]+),(.*),(\d+)\s*$/);
-            if (match) {
-                return {
-                    name: processName,
-                    pid: parseInt(match[3]),
-                    commandLine: match[2] || ''
-                };
-            }
-        }
-        return null;
-    } catch (e) {
-        return null;
-    }
-};
-
 export const isProcessRunning = async (processName: string): Promise<boolean> => {
-    const info = await getProcessInfo(processName);
-    return !!info;
+    try {
+        const { stdout } = await execAsync(`tasklist /FI "IMAGENAME eq ${processName}" /FO CSV /NH`, { windowsHide: true });
+        // If the process is running, stdout will contain the process name.
+        // If not running, it might return "INFO: No tasks are running..." or just empty depending on localization/system.
+        // But reliably, if it contains the process name in quotes, it's running.
+        return stdout.toLowerCase().includes(`"${processName.toLowerCase()}"`);
+    } catch (e) {
+        // Checking failed, assume not running or error out?
+        // Usually assume not running if tasklist fails, but let's log if needed.
+        return false;
+    }
 };
