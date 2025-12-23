@@ -45,7 +45,6 @@ export const checkForUpdate = async (): Promise<UpdateCheckResult> => {
             };
         }
 
-        logger.info(`App is up to date (v${currentVersion}).`);
         return {
             hasUpdate: false,
             latestVersion: latestInfo.version,

@@ -55,21 +55,6 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
     React.useEffect(() => {
         logger.info(`App Initialized (v${getAppVersion()})`);
 
-        // Check for updates
-        if (process.env.NODE_ENV !== 'development') {
-            logger.info('업데이트 확인 중...');
-            checkForUpdate().then(res => {
-                if (res.hasUpdate && res.downloadUrl) {
-                    logger.info(`새 업데이트 발견: v${res.latestVersion}`);
-                    setUpdateInfo({ url: res.downloadUrl, version: res.latestVersion });
-                } else {
-                    logger.info('최신 버전입니다.');
-                }
-            }).catch(e => {
-                logger.warn('업데이트 확인 실패: ' + e);
-            });
-        }
-
         // Fetch Server Notice
         const fetchNotice = async () => {
             try {
@@ -271,11 +256,15 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
             initialVisible: false,
             onInit: async (ctx: any) => {
                 if (process.env.NODE_ENV !== 'development') {
+                    logger.info('업데이트 확인 중...');
                     const res = await checkForUpdate();
                     if (res.hasUpdate && res.downloadUrl) {
+                        logger.info(`새 업데이트 발견: v${res.latestVersion}`);
                         setUpdateInfo({ url: res.downloadUrl, version: res.latestVersion });
                         ctx.setVisible(true);
                         ctx.setStatus(<Text color="green">업데이트 가능!</Text>);
+                    } else {
+                        logger.info('최신 버전입니다.');
                     }
                 }
             },
