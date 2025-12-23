@@ -192,7 +192,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
 
         switch (screen) {
             case 'INIT':
-                return <Init onDone={handleInitDone} onExit={exit} onStatusChange={setInitStatus} />;
+                return <Init onDone={handleInitDone} onExit={exit} onStatusChange={setInitStatus} onPathDetected={(path) => setInstallPath(path)} />;
             case 'MAIN_MENU':
                 return <MainMenu onSelect={handleMenuSelect} onExit={exit} />;
             case 'CASE_1':
@@ -208,7 +208,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
         }
     };
 
-    const isInputActive = screen === 'MAIN_MENU' || (screen === 'INIT' && initStatus !== 'INPUT');
+    const isInputActive = !(screen === 'INIT' && initStatus === 'INPUT');
 
     const sidebarItems: any[] = [
         {
@@ -236,11 +236,71 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
                 const enabled = getBackupEnabled();
                 ctx.setStatus(enabled ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>);
             },
-            onClick: (ctx: any) => {
+            onClick: async (ctx: any) => {
                 const current = getBackupEnabled();
-                setBackupEnabled(!current);
                 const newState = !current;
+                setBackupEnabled(newState);
+
+                if (!newState && installPath) {
+                    const { deleteBackup } = await import('../utils/restore.js');
+                    await deleteBackup(installPath);
+                }
+
+                const { notifyBackupCreated } = await import('../utils/backupObserver.js');
+                notifyBackupCreated();
+
                 ctx.setStatus(newState ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>);
+            }
+        },
+        {
+            keyChar: 'R',
+            description: '백업 복구',
+            isChild: true,
+            initialVisible: false,
+            onInit: (ctx: any) => {
+                if (!installPath) {
+                    // logger.error('설치 경로가 설정되지 않았습니다.');
+                    return;
+                }
+
+                let unsubscribe: (() => void) | undefined;
+
+                const check = async () => {
+                    try {
+                        const { getBackupInfo } = await import('../utils/restore.js');
+                        const version = await getBackupInfo(installPath);
+                        if (version) {
+                            ctx.setVisible(true);
+                            ctx.setStatus(<Text color="yellow">({version})</Text>);
+                        } else {
+                            // logger.warn('백업 파일이 존재하지 않습니다.');
+                            ctx.setVisible(false);
+                        }
+                    } catch (e) {
+                        ctx.setVisible(false);
+                    }
+                };
+
+                check();
+
+                import('../utils/backupObserver.js').then(({ subscribeToBackupCreated }) => {
+                    unsubscribe = subscribeToBackupCreated(check);
+                });
+
+                return () => {
+                    if (unsubscribe) unsubscribe();
+                };
+            },
+            onClick: async (ctx: any) => {
+                if (!installPath) {
+                    logger.error('설치 경로가 설정되지 않았습니다.');
+                    return;
+                }
+                const { restoreBackup } = await import('../utils/restore.js');
+                const success = await restoreBackup(installPath);
+                if (success) {
+                    ctx.setStatus(<Text color="green">복구 완료!</Text>);
+                }
             }
         },
         {
@@ -277,17 +337,19 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
             description: '',
             initialVisible: false,
             onInit: async (ctx: any) => {
-                if (process.env.NODE_ENV !== 'development') {
-                    logger.info('업데이트 확인 중...');
-                    const res = await checkForUpdate();
-                    if (res.hasUpdate && res.downloadUrl) {
-                        logger.info(`새 업데이트 발견: v${res.latestVersion}`);
-                        setUpdateInfo({ url: res.downloadUrl, version: res.latestVersion, updateType: res.updateType });
-                        ctx.setVisible(true);
-                        ctx.setStatus(<Text color="green">업데이트 ({appVersion} {'->'} {res.latestVersion})</Text>);
-                    } else {
-                        logger.info('최신 버전입니다.');
-                    }
+                if (process.env.NODE_ENV === 'development') {
+                    return;
+                }
+
+                logger.info('업데이트 확인 중...');
+                const res = await checkForUpdate();
+                if (res.hasUpdate && res.downloadUrl) {
+                    logger.info(`새 업데이트 발견: v${res.latestVersion}`);
+                    setUpdateInfo({ url: res.downloadUrl, version: res.latestVersion, updateType: res.updateType });
+                    ctx.setVisible(true);
+                    ctx.setStatus(<Text color="green">업데이트 ({appVersion} {'->'} {res.latestVersion})</Text>);
+                } else {
+                    logger.info('최신 버전입니다.');
                 }
             },
             onClick: () => handleUpdate()
@@ -325,6 +387,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
 
                 {/* Sidebar (Right) */}
                 <Sidebar
+                    key={installPath} // Force remount when installPath is ready to refresh async status
                     isActive={isInputActive}
                     items={sidebarItems} />
             </Box>

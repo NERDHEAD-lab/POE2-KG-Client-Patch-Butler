@@ -13,7 +13,8 @@ export interface SidebarItemConfig {
     type?: 'item' | 'separator';
     initialStatus?: React.ReactNode;
     initialVisible?: boolean;
-    onInit?: (ctx: SidebarContext) => void;
+    isChild?: boolean;
+    onInit?: (ctx: SidebarContext) => void | (() => void);
     onClick?: (ctx: SidebarContext) => void;
 }
 
@@ -41,6 +42,7 @@ const Sidebar: React.FC<SidebarProps> = ({ items, isActive }) => {
 
     // Initializer
     useEffect(() => {
+        const cleanups: (() => void)[] = [];
         items.forEach((item, index) => {
             if (item.onInit) {
                 const ctx: SidebarContext = {
@@ -60,9 +62,13 @@ const Sidebar: React.FC<SidebarProps> = ({ items, isActive }) => {
                         return next;
                     })
                 };
-                item.onInit(ctx);
+                const cleanup = item.onInit(ctx);
+                if (typeof cleanup === 'function') cleanups.push(cleanup);
             }
         });
+        return () => {
+            cleanups.forEach(c => c());
+        };
     }, []); // Run once on mount. Warning: Closures in onInit will be stale if they depend on changing App state without refs.
 
     useInput((input, key) => {
@@ -129,7 +135,8 @@ const Sidebar: React.FC<SidebarProps> = ({ items, isActive }) => {
 
                         return (
                             <Box key={index} flexDirection="row">
-                                <Box width={6}>
+                                <Box width={6} flexDirection="row">
+                                    {config.isChild && <Text color="gray">{'ㄴ '}</Text>}
                                     {config.keyChar ? (
                                         <Text>[<Text color="cyan">{config.keyChar}</Text>]</Text>
                                     ) : (

@@ -66,6 +66,7 @@ const CasePatchFailed: React.FC<CasePatchFailedProps> = ({ installPath, onGoBack
                         logResult.webRoot,
                         logResult.backupWebRoot || logResult.webRoot,
                         logResult.filesToDownload,
+                        extractVersion(logResult.webRoot) || 'Unknown',
                         installPath,
                         (status) => {
                             setFileStates(prev => ({

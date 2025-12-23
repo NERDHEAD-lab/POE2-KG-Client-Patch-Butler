@@ -10,9 +10,10 @@ interface InitProps {
     onDone: (installPath: string, version: string) => void;
     onExit: () => void;
     onStatusChange?: (status: 'LOADING' | 'CONFIRM' | 'INPUT') => void;
+    onPathDetected?: (path: string) => void;
 }
 
-const Init: React.FC<InitProps> = ({ onDone, onExit, onStatusChange }) => {
+const Init: React.FC<InitProps> = ({ onDone, onExit, onStatusChange, onPathDetected }) => {
     const [status, setStatus] = useState<'LOADING' | 'PROCESS_CHECK' | 'CONFIRM' | 'INPUT'>('LOADING');
     const [installPath, setInstallPath] = useState<string>('');
     const [version, setVersion] = useState<string>('Checking...'); // 버전 확인 중
@@ -41,6 +42,7 @@ const Init: React.FC<InitProps> = ({ onDone, onExit, onStatusChange }) => {
             const savedPath = getLastInstallPath();
             if (savedPath) {
                 setInstallPath(savedPath);
+                if (onPathDetected) onPathDetected(savedPath);
                 setStatus('CONFIRM');
                 return;
             }
@@ -48,6 +50,7 @@ const Init: React.FC<InitProps> = ({ onDone, onExit, onStatusChange }) => {
             const regPath = await getInstallPath();
             if (regPath) {
                 setInstallPath(regPath);
+                if (onPathDetected) onPathDetected(regPath);
                 setStatus('CONFIRM');
             } else {
                 setStatus('INPUT');

@@ -61,6 +61,7 @@ const CaseExecuteFailed: React.FC<CaseExecuteFailedProps> = ({ installPath, onGo
                 logResult.webRoot,
                 logResult.backupWebRoot || logResult.webRoot,
                 WHITELIST,
+                extractVersion(logResult.webRoot) || 'Unknown',
                 installPath,
                 (status) => {
                     setFileStates(prev => ({
@@ -120,6 +121,7 @@ const CaseExecuteFailed: React.FC<CaseExecuteFailedProps> = ({ installPath, onGo
                         logResult.webRoot,
                         logResult.backupWebRoot || logResult.webRoot,
                         ['PackCheck.exe'],
+                        extractVersion(logResult.webRoot) || 'Unknown',
                         installPath,
                         () => { }
                     );
