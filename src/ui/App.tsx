@@ -29,6 +29,24 @@ interface AppProps {
 const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
     const { exit } = useApp();
     const { stdout } = useStdout();
+    const [dimensions, setDimensions] = useState({
+        columns: stdout?.columns || 80,
+        rows: stdout?.rows || 24
+    });
+
+    useEffect(() => {
+        const onResize = () => {
+            setDimensions({
+                columns: stdout?.columns || 80,
+                rows: stdout?.rows || 24
+            });
+        };
+
+        stdout?.on('resize', onResize);
+        return () => {
+            stdout?.off('resize', onResize);
+        };
+    }, [stdout]);
 
     // Always start at INIT to ensure installPath is loaded context correctly
     const [screen, setScreen] = useState<Screen>('INIT');
@@ -274,7 +292,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
     ];
 
     return (
-        <Box flexDirection="column" padding={1} minHeight={stdout?.rows}>
+        <Box flexDirection="column" padding={1} minHeight={dimensions.rows} width={dimensions.columns}>
             {/* Header */}
             <Box flexDirection="column" marginBottom={1}>
                 {/* Rainbow Title */}
