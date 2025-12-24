@@ -1,5 +1,48 @@
 # Changelog
 
+## [1.4.0](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/compare/1.3.1...1.4.0) (2025-12-24)
+
+
+### Features
+
+* UI/UX 개편 ([891faee](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/891faee86b1e286e28001e85a2c11f4592095cc5))
+* UI/UX 개편 - 2 ([46357c8](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/46357c815665be7e606c8c789480ce482409e839))
+* UI/UX 개편 - 3 ([a0001a4](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/a0001a43544116548b2d5fb0119d979dbd1d6fad))
+* UI/UX 개편 - 4 ([8ccc5d5](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/8ccc5d593a701a71f66f87d65cfad9e00e25ae1e))
+* UI/UX 상호작용 개선 ([aea17cf](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/aea17cf259213df847ac299f95f7a2d58201d5c5))
+* 로그 기능 추가 ([2033328](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/20333281b95cb94573b06efd89571fcd76be0fd0))
+* 로그 기능 추가 - 2 ([dbee5a5](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/dbee5a515193df2977c2b0841a502145c6700aab))
+* 로그 출력 방식 통합 ([6d55c73](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/6d55c73dd20f1052729a926de0c7acc74264efbc))
+* 빠른 도구에 기능 추가 ([e14478d](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/e14478dacc3624c490db37b92387771d3f57e1d1))
+* 오류 메시지 일부 한글화 ([e3d265c](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/e3d265c307bfa003bf43bd937018ffbfaeb3f895))
+* 이전 버전과 호환되지 않는 구조등에 대한 마이그레이션 코드 통합 ([4fcade3](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/4fcade3f1778c1f42815ffd1ee60a46c3e0959da))
+* 자동 감지 모드 일 때, 트레이에 표시되도록 기능 추가 - 1 ([50467b7](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/50467b7209478dc56b07540debf9541022c4ad51))
+* 자동 감지 모드 일 때, 트레이에 표시되도록 기능 추가 - 2 ([0f65945](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/0f6594597b4ed8f4c1bc1cf421b10c6acbcd2dfd))
+* 자동 감지 후 작업을 자동으로 진행하는 "자동 진행 모드" 추가 ([27e770a](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/27e770a74b7f36b62316f34df122e69b4433753d))
+* 자동 수정 후 자동 실행 로직 구현 (안됨) ([79b4837](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/79b4837238cb6d454e3123e8658eedd6cf895893))
+* 타이틀을 화려하게! ([e5bccaf](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/e5bccafa76be2313473f72073de63ab8e946c820))
+* 툴 업데이트 기능 개선 ([ebf0ccf](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/ebf0ccf1bd6cd43fc1114b172524ee3ebad4214e))
+* 툴 업데이트 기능 개선 - 2 ([0c0de60](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/0c0de608778f9e4fbe8fa388574c1f6c99777bcb))
+* 화면 크기 변화에 동적으로 렌더링을 하도록 개선 ([e1336e2](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/e1336e29e71f3f4374579da51486de8c53a506be))
+* 후원하기 버튼 추가 ([0aa7425](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/0aa74253465d1cc5a615affe1469ba15cac45086))
+* 후원하기 버튼 추가 ([22e4b67](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/22e4b67aef6087ee27802f1270b25f6e035b892e))
+
+
+### Bug Fixes
+
+* setup이 표기하는 버전이 실제 버전을 표기하도록 개선 ([5cff584](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/5cff584f08ebbbf7a434ebec04b2fc147e7c5078))
+* 간헐적으로 KakaoClient.txt를 읽어들이는 과정에서 Invalid string length 발생하는 문제 조치 ([1aa5cd1](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/1aa5cd1751ca9e9e02798c46a2b039953d677932))
+* 설치가 깔끔하제 제거 되지 않는 문제 수정 ([2040917](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/20409177182e94b06b87a06e48bbbd8f65962b69))
+* 업데이트 실패 자동 감지 알림이 항상 맨 앞에 표시되도록 수정 ([397b65d](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/397b65dd09881046a68c676da3b0fd2864ea4623))
+* 업데이트 확인을 두번 하는 문제 수정 ([92c3d2d](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/92c3d2dbb37d93a3e0b13b565bd47eb80a5e10c3))
+* 자동 감지 기능을 재부팅 시 활성화하기 위한 스크립트(silent_launcher.vbs)가 설치경로에 노출 되는 문제 개선 ([085ab0d](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/085ab0d049920a16def9040d8d2ebc3bfc24e899))
+* 자동 감지 기능을 재부팅 시 활성화하기 위한 스크립트(silent_launcher.vbs)가 설치경로에 노출 되는 문제 개선 - 2 ([b157b85](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/b157b85f2928d587c60d588a59a503e40f7079d6))
+* 자동 감지 기능을 재부팅 시 활성화하기 위한 스크립트(silent_launcher.vbs)가 설치경로에 노출 되는 문제 개선 - 3 ([043f3fa](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/043f3fa4a0dfb3f72aeb9c4b1fd9879464b1c7bf))
+* 자동 감지 기능을 재부팅 시 활성화하기 위한 스크립트(silent_launcher.vbs)가 설치경로에 노출 되는 문제 개선 - 4 ([c2eb911](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/c2eb9113f76cf8b742a82589372f66500ea25354))
+* 자동 감지 기능을 재부팅 시 활성화하기 위한 스크립트(silent_launcher.vbs)가 설치경로에 노출 되는 문제 개선 - 5 ([9ab4956](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/9ab49563dfc30459420330cd39f4b1ad218af8e0))
+* 중복 실행을 방지하도록 기능 개선 ([c8ad205](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/c8ad205be3ef4c1d8584f54c768d78149cdfaade))
+* 패치 오류 오탐지 및 누락 되는 이슈 조치 ([dd450b0](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/dd450b02fe44653ad91b9216bc28a8e81d997d1f))
+
 ## [1.3.1](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/compare/1.3.0...1.3.1) (2025-12-17)
 
 
