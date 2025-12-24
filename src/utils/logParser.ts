@@ -24,7 +24,24 @@ export async function parseLog(installPath: string): Promise<LogParseResult> {
         throw new Error(`로그 파일을 찾을 수 없습니다: ${logFilePath}`);
     }
 
-    const content = await fs.promises.readFile(logFilePath, 'utf-8');
+    // Optimize: Read only last 2MB to avoid Invalid string length error
+    const stats = await fs.promises.stat(logFilePath);
+    const fileSize = stats.size;
+    const READ_SIZE = 2 * 1024 * 1024; // 2MB
+
+    let content = '';
+
+    if (fileSize <= READ_SIZE) {
+        content = await fs.promises.readFile(logFilePath, 'utf-8');
+    } else {
+        const buffer = Buffer.alloc(READ_SIZE);
+        const handle = await fs.promises.open(logFilePath, 'r');
+        await handle.read(buffer, 0, READ_SIZE, fileSize - READ_SIZE);
+        await handle.close();
+        content = buffer.toString('utf-8');
+        // Ensure we don't start with a partial line (though split behavior handles it somewhat, better to be clean if possible, but existing logic seeks 'KAKAO LOG FILE OPENING' so it self-corrects)
+    }
+
     const lines = content.split('\n');
 
     let webRoot: string | null = null;
