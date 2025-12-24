@@ -350,6 +350,14 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
                 spawn('cmd', ['/c', 'start', 'https://nerdhead-lab.github.io/POE2-KG-Client-Patch-Butler?docs=FAQ.md'], { windowsVerbatimArguments: true });
             }
         },
+        { type: 'separator' },
+        {
+            keyChar: '/',
+            description: '후원하기',
+            onClick: () => {
+                spawn('cmd', ['/c', 'start', 'https://nerdhead-lab.github.io/POE2-KG-Client-Patch-Butler?docs=SUPPORT.md'], { windowsVerbatimArguments: true });
+            }
+        },
         {
             keyChar: 'U',
             description: '',
