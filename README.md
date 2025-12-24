@@ -25,7 +25,7 @@
 
 # POE2 KG Client Patch Butler
 
-![Demo](docs/poe2%20patch%20성공.gif)
+![Demo](docs/poe2_patch_butler_preview.gif)
 
 Kakao Games에서 퍼블리싱하는 Path of Exile 2 한국 클라이언트의 패치 및 실행 오류를 자동으로 감지하여 해결해주는 도구입니다.
 패치 실패뿐만 아니라 다양한 클라이언트 종료 및 실행 문제에 대한 해결 가이드를 제공합니다.
