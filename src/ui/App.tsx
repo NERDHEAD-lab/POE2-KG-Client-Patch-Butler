@@ -7,14 +7,18 @@ import CasePatchFailed from './Menu/CasePatchFailed.js';
 import CaseExecuteFailed from './Menu/CaseExecuteFailed.js';
 import CaseCrashing from './Menu/CaseCrashing.js';
 import CaseReportIssue from './Menu/CaseReportIssue.js';
-import AutoDetectNotice from './AutoDetectNotice.js';
+import Sidebar from './Sidebar.js';
+import OutputBox from './OutputBox.js';
+import RainbowText from './RainbowText.js';
 import { getAppVersion } from '../utils/version.js';
+import { getBackupEnabled, setBackupEnabled } from '../utils/config.js';
 import { checkForUpdate } from '../utils/updater.js';
 import { performSelfUpdate } from '../utils/selfUpdate.js';
 import { downloadFile } from '../utils/downloader.js';
 import { spawn } from 'child_process';
 import path from 'path';
 import os from 'os';
+import { logger } from '../utils/logger.js';
 
 type Screen = 'INIT' | 'MAIN_MENU' | 'CASE_1' | 'CASE_2' | 'CASE_3' | 'CASE_0';
 
@@ -25,6 +29,24 @@ interface AppProps {
 const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
     const { exit } = useApp();
     const { stdout } = useStdout();
+    const [dimensions, setDimensions] = useState({
+        columns: stdout?.columns || 80,
+        rows: stdout?.rows || 24
+    });
+
+    useEffect(() => {
+        const onResize = () => {
+            setDimensions({
+                columns: stdout?.columns || 80,
+                rows: stdout?.rows || 24
+            });
+        };
+
+        stdout?.on('resize', onResize);
+        return () => {
+            stdout?.off('resize', onResize);
+        };
+    }, [stdout]);
 
     // Always start at INIT to ensure installPath is loaded context correctly
     const [screen, setScreen] = useState<Screen>('INIT');
@@ -44,20 +66,13 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
             setScreen('MAIN_MENU');
         }
     };
-    const [updateInfo, setUpdateInfo] = useState<{ url: string, version: string } | null>(null);
+    const [updateInfo, setUpdateInfo] = useState<{ url: string, version: string, updateType: 'installer' | 'portable' } | null>(null);
     const [isUpdating, setIsUpdating] = useState(false);
     const [downloadProgress, setDownloadProgress] = useState(0);
     const [initStatus, setInitStatus] = useState<'LOADING' | 'PROCESS_CHECK' | 'CONFIRM' | 'INPUT' | null>(null);
 
     React.useEffect(() => {
-        // Check for updates
-        if (process.env.NODE_ENV !== 'development') {
-            checkForUpdate().then(res => {
-                if (res.hasUpdate && res.downloadUrl) {
-                    setUpdateInfo({ url: res.downloadUrl, version: res.latestVersion });
-                }
-            });
-        }
+        logger.info(`App Initialized (v${getAppVersion()})`);
 
         // Fetch Server Notice
         const fetchNotice = async () => {
@@ -65,10 +80,6 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
                 const response = await axios.get('https://nerdhead-lab.github.io/POE2-KG-Client-Patch-Butler/notice.txt');
                 if (response.status === 200 && response.data) {
                     const rawText = typeof response.data === 'string' ? response.data : String(response.data);
-                    // Simple sanitization: 
-                    // 1. Trim whitespace
-                    // 2. Remove non-printable characters (except slightly common ones like newline)
-                    // 3. Limit length to prevent UI overflow attacks
                     const cleanText = rawText.replace(/[^\x20-\x7E\n\r\t\uAC00-\uD7A3]/g, '').trim().slice(0, 5000);
 
                     if (cleanText.length > 0) {
@@ -85,7 +96,12 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
     const handleUpdate = () => {
         if (updateInfo && !isUpdating) {
             setIsUpdating(true);
-            const tempPath = path.join(os.tmpdir(), `poe2-patch-butler-${updateInfo.version}.exe`);
+            const tempFileName = updateInfo.updateType === 'installer'
+                ? `poe2-patch-butler-setup-${updateInfo.version}.exe`
+                : `poe2-patch-butler-${updateInfo.version}.exe`;
+            const tempPath = path.join(os.tmpdir(), tempFileName);
+
+            logger.info(`업데이트 다운로드 및 적용 시작: v${updateInfo.version} (${updateInfo.updateType})`);
 
             const doUpdate = async () => {
                 try {
@@ -93,11 +109,14 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
                         setDownloadProgress(s.progress);
                     });
 
+                    logger.success('업데이트 다운로드 완료. Watcher 중지 및 자가 업데이트 진행.');
+
                     const { stopWatcherProcess } = await import('../utils/autoDetect.js');
                     await stopWatcherProcess();
 
-                    performSelfUpdate(tempPath);
+                    performSelfUpdate(tempPath, updateInfo.updateType);
                 } catch (e) {
+                    logger.error('업데이트 실패: ' + e);
                     setIsUpdating(false);
                 }
             };
@@ -107,25 +126,11 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
 
     const handleOpenPatchNotes = () => {
         const url = 'https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/releases';
-        const start = (process.platform == 'darwin' ? 'open' : process.platform == 'win32' ? 'start' : 'xdg-open');
         spawn('cmd', ['/c', 'start', url], { windowsVerbatimArguments: true });
     };
 
     // Auto-detect toggle
     const [isAutoDetectEnabled, setIsAutoDetectEnabled] = useState(false);
-    const [showAutoDetectMsg, setShowAutoDetectMsg] = useState(false);
-
-    React.useEffect(() => {
-        const initAutoDetect = async () => {
-            const enabled = await import('../utils/autoDetect.js').then(m => m.isAutoDetectRegistryEnabled());
-            setIsAutoDetectEnabled(enabled);
-            if (enabled) {
-                // Ensure watcher is running/restarted with correct binary
-                import('../utils/autoDetect.js').then(m => m.restartWatcher());
-            }
-        };
-        initAutoDetect();
-    }, []);
 
     const toggleAutoDetect = async () => {
         const { enableAutoDetectRegistry, disableAutoDetectRegistry, startWatcherProcess, stopWatcherProcess } = await import('../utils/autoDetect.js');
@@ -135,32 +140,25 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
             await disableAutoDetectRegistry();
             await stopWatcherProcess();
             setIsAutoDetectEnabled(false);
-            setShowAutoDetectMsg(true);
-            setTimeout(() => setShowAutoDetectMsg(false), 3000);
+            logger.warn('자동 감지 기능을 껐습니다. (Watcher Stopped)');
+            return false;
         } else {
             // Turning ON
-            await enableAutoDetectRegistry();
-            startWatcherProcess();
-            setIsAutoDetectEnabled(true);
-            setShowAutoDetectMsg(true);
-            setTimeout(() => setShowAutoDetectMsg(false), 3000);
+            try {
+                await enableAutoDetectRegistry();
+                startWatcherProcess();
+                setIsAutoDetectEnabled(true);
+                logger.success('자동 감지 기능을 켰습니다. 업데이트 실패 시 자동으로 해결합니다.');
+                return true;
+            } catch (e) {
+                logger.error('자동 감지 설정 실패: ' + e);
+                return false;
+            }
         }
     };
 
     useInput((input, key) => {
-        const isNotInputMode = screen === 'MAIN_MENU' || (screen === 'INIT' && initStatus !== 'INPUT');
-
-        if (isNotInputMode) {
-            if (input === 'u' || input === 'U') {
-                handleUpdate();
-            }
-            if (input === 'p' || input === 'P') {
-                handleOpenPatchNotes();
-            }
-            if (input === 'a' || input === 'A') {
-                toggleAutoDetect();
-            }
-        }
+        // Only handle Global inputs if any (None for now, Sidebar handles its own)
     });
 
     const getDayCount = () => {
@@ -172,8 +170,6 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
         const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
         return diffDays + 1; // 1일차 시작
     };
-
-
 
     const handleMenuSelect = (option: number) => {
         switch (option) {
@@ -196,11 +192,11 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
 
         switch (screen) {
             case 'INIT':
-                return <Init onDone={handleInitDone} onExit={exit} onStatusChange={setInitStatus} />;
+                return <Init onDone={handleInitDone} onExit={exit} onStatusChange={setInitStatus} onPathDetected={(path) => setInstallPath(path)} isAutoFix={initialMode === 'FIX_PATCH'} />;
             case 'MAIN_MENU':
                 return <MainMenu onSelect={handleMenuSelect} onExit={exit} />;
             case 'CASE_1':
-                return <CasePatchFailed installPath={installPath} onGoBack={() => setScreen('MAIN_MENU')} onExit={exit} />;
+                return <CasePatchFailed installPath={installPath} onGoBack={() => setScreen('MAIN_MENU')} onExit={exit} isAutoFix={initialMode === 'FIX_PATCH'} />;
             case 'CASE_2':
                 return <CaseExecuteFailed installPath={installPath} onGoBack={() => setScreen('MAIN_MENU')} onExit={exit} />;
             case 'CASE_3':
@@ -212,60 +208,216 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
         }
     };
 
+    const isInputActive = !(screen === 'INIT' && initStatus === 'INPUT');
+
+    const sidebarItems: any[] = [
+        {
+            keyChar: 'A',
+            description: '오류 자동 감지:',
+            initialStatus: <Text color="gray"> Checking...</Text>,
+            onInit: async (ctx: any) => {
+                const enabled = await import('../utils/autoDetect.js').then(m => m.isAutoDetectRegistryEnabled());
+                setIsAutoDetectEnabled(enabled);
+                ctx.setStatus(enabled ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>);
+                if (enabled) {
+                    import('../utils/autoDetect.js').then(m => m.restartWatcher());
+                }
+            },
+            onClick: async (ctx: any) => {
+                const newState = await toggleAutoDetect();
+                ctx.setStatus(newState ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>);
+            }
+        },
+        {
+            keyChar: 'S',
+            description: '자동 진행 모드:',
+            isChild: true,
+            disabled: !isAutoDetectEnabled,
+            initialStatus: <Text color="gray"> Checking...</Text>,
+            onInit: async (ctx: any) => {
+                const { getSilentModeEnabled } = await import('../utils/config.js');
+                const enabled = getSilentModeEnabled();
+                ctx.setStatus(enabled ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>);
+            },
+            onClick: async (ctx: any) => {
+                const { getSilentModeEnabled, setSilentModeEnabled } = await import('../utils/config.js');
+                const current = getSilentModeEnabled();
+                setSilentModeEnabled(!current);
+                ctx.setStatus(!current ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>);
+            }
+        },
+        {
+            keyChar: 'B',
+            description: '패치 백업 모드:',
+            initialStatus: <Text color="gray"> Checking...</Text>,
+            onInit: (ctx: any) => {
+                const enabled = getBackupEnabled();
+                ctx.setStatus(enabled ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>);
+            },
+            onClick: async (ctx: any) => {
+                const current = getBackupEnabled();
+                const newState = !current;
+                setBackupEnabled(newState);
+
+                if (!newState && installPath) {
+                    const { deleteBackup } = await import('../utils/restore.js');
+                    await deleteBackup(installPath);
+                }
+
+                const { notifyBackupCreated } = await import('../utils/backupObserver.js');
+                notifyBackupCreated();
+
+                ctx.setStatus(newState ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>);
+            }
+        },
+        {
+            keyChar: 'R',
+            description: '백업 복구',
+            isChild: true,
+            initialVisible: false,
+            onInit: (ctx: any) => {
+                if (!installPath) {
+                    // logger.error('설치 경로가 설정되지 않았습니다.');
+                    return;
+                }
+
+                let unsubscribe: (() => void) | undefined;
+
+                const check = async () => {
+                    try {
+                        const { getBackupInfo } = await import('../utils/restore.js');
+                        const version = await getBackupInfo(installPath);
+                        if (version) {
+                            ctx.setVisible(true);
+                            ctx.setStatus(<Text color="yellow">({version})</Text>);
+                        } else {
+                            // logger.warn('백업 파일이 존재하지 않습니다.');
+                            ctx.setVisible(false);
+                        }
+                    } catch (e) {
+                        ctx.setVisible(false);
+                    }
+                };
+
+                check();
+
+                import('../utils/backupObserver.js').then(({ subscribeToBackupCreated }) => {
+                    unsubscribe = subscribeToBackupCreated(check);
+                });
+
+                return () => {
+                    if (unsubscribe) unsubscribe();
+                };
+            },
+            onClick: async (ctx: any) => {
+                if (!installPath) {
+                    logger.error('설치 경로가 설정되지 않았습니다.');
+                    return;
+                }
+                const { restoreBackup } = await import('../utils/restore.js');
+                const success = await restoreBackup(installPath);
+                if (success) {
+                    ctx.setStatus(<Text color="green">복구 완료!</Text>);
+                }
+            }
+        },
+        {
+            type: 'separator'
+        },
+        {
+            keyChar: 'P',
+            description: '패치노트 확인',
+            onClick: () => handleOpenPatchNotes()
+        },
+        {
+            keyChar: 'W',
+            description: '작동원리',
+            onClick: () => {
+                spawn('cmd', ['/c', 'start', 'https://nerdhead-lab.github.io/POE2-KG-Client-Patch-Butler?docs=PRINCIPLES.md'], { windowsVerbatimArguments: true });
+            }
+        },
+        {
+            keyChar: 'I',
+            description: '피드백',
+            onClick: () => {
+                spawn('cmd', ['/c', 'start', 'https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/issues'], { windowsVerbatimArguments: true });
+            }
+        },
+        {
+            keyChar: 'H',
+            description: '자주 묻는 질문',
+            onClick: () => {
+                spawn('cmd', ['/c', 'start', 'https://nerdhead-lab.github.io/POE2-KG-Client-Patch-Butler?docs=FAQ.md'], { windowsVerbatimArguments: true });
+            }
+        },
+        {
+            keyChar: 'U',
+            description: '',
+            initialVisible: false,
+            onInit: async (ctx: any) => {
+                if (process.env.NODE_ENV === 'development') {
+                    return;
+                }
+
+                logger.info('업데이트 확인 중...');
+                const res = await checkForUpdate();
+                if (res.hasUpdate && res.downloadUrl) {
+                    logger.info(`새 업데이트 발견: v${res.latestVersion}`);
+                    setUpdateInfo({ url: res.downloadUrl, version: res.latestVersion, updateType: res.updateType });
+                    ctx.setVisible(true);
+                    ctx.setStatus(<Text color="green">업데이트 ({appVersion} {'->'} {res.latestVersion})</Text>);
+                } else {
+                    logger.info('최신 버전입니다.');
+                }
+            },
+            onClick: () => handleUpdate()
+        }
+    ];
+
     return (
-        <Box flexDirection="column" padding={1} minHeight={stdout?.rows}>
+        <Box flexDirection="column" padding={1} minHeight={dimensions.rows} width={dimensions.columns}>
             {/* Header */}
             <Box flexDirection="column" marginBottom={1}>
-                <Text color="yellow">POE2 카카오게임즈 클라이언트 오류 해결 마법사 v{appVersion}</Text>
-                <Box borderStyle="single" borderColor="red" paddingX={1} flexDirection="column">
-                    <Text color="red">카카오야 제발 일해라</Text>
-                    <Text>POE2 카카오게임즈 클라이언트 정상화 기원 <Text bold color="red">최초 발생일로 부터 {getDayCount()}일차</Text></Text>
-                </Box>
+                {/* Rainbow Title */}
+                <RainbowText>POE2 카카오게임즈 클라이언트 오류 해결 마법사 v{appVersion}</RainbowText>
+
                 {/* Server Notice */}
-                {serverNotice && (
-                    <Box flexDirection="column">
-                        <Box borderStyle="single" borderColor="white" paddingX={1} marginTop={0} flexDirection="column">
-                            <Text>{serverNotice}</Text>
-                        </Box>
-                        <Box position="absolute" marginTop={0} marginLeft={2}>
-                            <Text> 공지 </Text>
-                        </Box>
-                    </Box>
-                )}
+
             </Box>
 
-            {/* Body */}
-            <Box flexDirection="column" flexGrow={1}>
-                {renderBody()}
+            {/* Main Layout: Row [Content | Sidebar] */}
+            <Box flexDirection="row" flexGrow={1} alignItems="stretch">
+                {/* Main Content Info */}
+                <Box flexDirection="column" width={Math.max(0, dimensions.columns - 34)}>
+                    {/* Server Notice moved here */}
+                    {serverNotice && (
+                        <Box flexDirection="column" marginBottom={1}>
+                            <Box borderStyle="single" borderColor="white" paddingX={1} marginTop={0} flexDirection="column">
+                                <Text>{serverNotice}</Text>
+                            </Box>
+                            <Box position="absolute" marginTop={0} marginLeft={2}>
+                                <Text> 공지 </Text>
+                            </Box>
+                        </Box>
+                    )}
+                    {renderBody()}
+                </Box>
+
+                {/* Sidebar (Right) */}
+                <Sidebar
+                    key={installPath} // Force remount when installPath is ready to refresh async status
+                    isActive={isInputActive}
+                    items={sidebarItems} />
             </Box>
 
-            {/* Footer */}
-            <Box marginTop={1} flexDirection="column">
-                {updateInfo && !isUpdating ? (
-                    <AutoDetectNotice isEnabled={isAutoDetectEnabled} showMsg={showAutoDetectMsg} baseColor="green" />
-                ) : (
-                    <AutoDetectNotice isEnabled={isAutoDetectEnabled} showMsg={showAutoDetectMsg} baseColor="gray" />
-                )}
+            {/* Footer Area */}
+            <Box marginTop={0} flexDirection="column">
 
-                {updateInfo ? (
-                    <Text color={screen === 'INIT' && initStatus === 'INPUT' ? 'gray' : 'green'}>
-                        새 업데이트가 있습니다! [{appVersion} {'->'} {updateInfo.version}]
-                        {screen === 'MAIN_MENU' || (screen === 'INIT' && initStatus === 'CONFIRM')
-                            ? <Text> 업데이트 하려면 <Text bold color="yellow">U</Text>를 눌러주세요</Text>
-                            : (screen === 'INIT' && initStatus === 'INPUT'
-                                ? <Text> (설치경로 수정중)</Text>
-                                : <Text> (메인메뉴에서 업데이트 가능)</Text>
-                            )
-                        }
-                    </Text>
-                ) : (
-                    !isUpdating && (
-                        <Text color="gray">
-                            패치노트를 확인 하려면 <Text bold color="yellow">P</Text>를 눌러주세요
-                        </Text>
-                    )
-                )}
-                <Box marginTop={0}>
+                {/* Output Box (Toast) */}
+                <OutputBox />
+
+                <Box marginTop={0} flexDirection="column">
+                    <Text color="gray">POE2 <Text color="#E06C75">'Transferred a partial file'</Text> 문제 해결 기원 <Text color="#E06C75">{getDayCount()}일차</Text></Text>
                     <Text color="gray">powered by NERDHEAD ( https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler )</Text>
                 </Box>
             </Box>

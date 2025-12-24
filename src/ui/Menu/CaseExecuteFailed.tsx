@@ -7,6 +7,7 @@ import { runPackCheck } from '../../utils/launcher.js';
 import path from 'path';
 import fs from 'fs';
 import { ProgressBar } from '../ProgressBar.js';
+import { logger } from '../../utils/logger.js';
 
 interface CaseExecuteFailedProps {
     installPath: string;
@@ -33,12 +34,16 @@ const CaseExecuteFailed: React.FC<CaseExecuteFailedProps> = ({ installPath, onGo
     useEffect(() => {
         const init = async () => {
             try {
+                logger.info('진단 메뉴 진입: 실행 불가 (CaseExecuteFailed)');
                 // 1단계 준비
                 const result = await parseLog(installPath);
                 setLogResult(result);
+                logger.info(`로그 분석 완료: WebRoot=${result.webRoot}`);
                 setStep('STEP1_CONFIRM');
             } catch (e) {
-                setSubMsg(`로그 분석 실패: ${e instanceof Error ? e.message : String(e)}`);
+                const errMsg = e instanceof Error ? e.message : String(e);
+                logger.error(`로그 분석 실패: ${errMsg}`);
+                setSubMsg(`로그 분석 실패: ${errMsg}`);
                 setStep('ERROR');
             }
         };
@@ -49,12 +54,14 @@ const CaseExecuteFailed: React.FC<CaseExecuteFailedProps> = ({ installPath, onGo
     const startForcePatch = async () => {
         if (!logResult || !logResult.webRoot) return;
         setStep('STEP1_DOWNLOADING');
+        logger.info('핵심 파일 강제 패치 시작...');
 
         try {
             await downloadFiles(
                 logResult.webRoot,
                 logResult.backupWebRoot || logResult.webRoot,
                 WHITELIST,
+                extractVersion(logResult.webRoot) || 'Unknown',
                 installPath,
                 (status) => {
                     setFileStates(prev => ({
@@ -66,9 +73,12 @@ const CaseExecuteFailed: React.FC<CaseExecuteFailedProps> = ({ installPath, onGo
                     }));
                 }
             );
+            logger.success('핵심 파일 다운로드 및 패치 완료');
             setStep('STEP1_DONE');
         } catch (e) {
-            setSubMsg(`패치 실패: ${e instanceof Error ? e.message : String(e)}`);
+            const errMsg = e instanceof Error ? e.message : String(e);
+            logger.error(`패치 실패: ${errMsg}`);
+            setSubMsg(`패치 실패: ${errMsg}`);
             setStep('ERROR');
         }
     };
@@ -76,15 +86,20 @@ const CaseExecuteFailed: React.FC<CaseExecuteFailedProps> = ({ installPath, onGo
     const initStep2 = () => {
         const paths = getShaderCachePaths();
         setCachePaths(paths);
+        logger.info(`캐시 폴더 발견: ${paths.length}개`);
         setStep('STEP2_CONFIRM');
     };
 
     const doClearCache = async () => {
         try {
+            logger.info('캐시 제거 시작...');
             await clearShaderCache(cachePaths);
+            logger.success('캐시 제거 완료');
             setStep('STEP2_DONE');
         } catch (e) {
-            setSubMsg(`캐시 삭제 실패: ${e instanceof Error ? e.message : String(e)}`);
+            const errMsg = e instanceof Error ? e.message : String(e);
+            logger.error(`캐시 제거 실패 (계속 진행): ${errMsg}`);
+            setSubMsg(`캐시 삭제 실패: ${errMsg}`);
             setStep('STEP2_DONE');
         }
     };
@@ -92,6 +107,7 @@ const CaseExecuteFailed: React.FC<CaseExecuteFailedProps> = ({ installPath, onGo
     const initStep3 = () => {
         const exists = fs.existsSync(path.join(installPath, 'PackCheck.exe'));
         setPackCheckExists(exists);
+        logger.info(`PackCheck.exe 상태: ${exists ? '존재' : '없음'}`);
         setStep('STEP3_CONFIRM');
     };
 
@@ -99,16 +115,20 @@ const CaseExecuteFailed: React.FC<CaseExecuteFailedProps> = ({ installPath, onGo
         if (!packCheckExists) {
             if (logResult?.webRoot) {
                 setSubMsg("PackCheck.exe 다운로드 중...");
+                logger.info('PackCheck.exe 다운로드 시도...');
                 try {
                     await downloadFiles(
                         logResult.webRoot,
                         logResult.backupWebRoot || logResult.webRoot,
                         ['PackCheck.exe'],
+                        extractVersion(logResult.webRoot) || 'Unknown',
                         installPath,
                         () => { }
                     );
                     setPackCheckExists(true);
+                    logger.success('PackCheck.exe 다운로드 성공');
                 } catch (e) {
+                    logger.error('PackCheck.exe 다운로드 실패');
                     setSubMsg("PackCheck.exe 다운로드 실패");
                 }
             }
@@ -116,9 +136,11 @@ const CaseExecuteFailed: React.FC<CaseExecuteFailedProps> = ({ installPath, onGo
 
         setStep('STEP3_RUNNING');
         try {
+            logger.info('PackCheck 실행 명령 전달');
             await runPackCheck(installPath);
         } catch (e) {
             // 에러 무시 (사용자가 출력 확인)
+            logger.warn('PackCheck 실행 중 예외 또는 완료: ' + e);
         }
         setStep('STEP4_CONFIRM');
     };

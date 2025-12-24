@@ -1,34 +1,58 @@
 import Conf from 'conf';
+import path from 'path';
+import process from 'process';
+import fs from 'fs';
 
 // Handle ESM/CJS interop for Conf
 // @ts-ignore
 const ConfClass = Conf.default || Conf;
 
+const APP_DATA_ROOT = path.join(process.env.APPDATA || process.env.HOME || '', 'poe2-patch-butler');
+const CONFIG_DIR = path.join(APP_DATA_ROOT, 'config');
+
 const config = new ConfClass({
+    cwd: CONFIG_DIR,
     projectName: 'poe2-patch-butler',
     projectSuffix: '', // -nodejs 접미사 제거
     schema: {
         lastInstallPath: {
             type: 'string',
+        },
+        lastMigratedVersion: {
+            type: 'string',
+        },
+        isBackupEnabled: {
+            type: 'boolean',
+            default: false
         }
     },
 });
 
-// Cleanup old config folder with -nodejs suffix
-try {
-    const appData = process.env.APPDATA;
-    if (appData) {
-        // Explicitly import fs and path here since they might not be imported yet in this file
-        const fs = await import('fs');
-        const path = await import('path');
-        const oldPath = path.default.join(appData, 'poe2-patch-butler-nodejs');
-        if (fs.default.existsSync(oldPath)) {
-            fs.default.rmSync(oldPath, { recursive: true, force: true });
-        }
-    }
-} catch (e) {
-    // Ignore cleanup errors
-}
+export const getBackupEnabled = (): boolean => {
+    return (config.get('isBackupEnabled') as boolean) || false;
+};
+
+export const setBackupEnabled = (enabled: boolean): void => {
+    config.set('isBackupEnabled', enabled);
+};
+
+export const getLastMigratedVersion = (): string => {
+    return (config.get('lastMigratedVersion') as string) || '0.0.0';
+};
+
+export const setLastMigratedVersion = (version: string): void => {
+    config.set('lastMigratedVersion', version);
+};
+
+// Returns the folder containing the config file (.../config)
+export const getConfigDirectory = (): string => {
+    return CONFIG_DIR;
+};
+
+// Returns the root application data folder (.../poe2-patch-butler)
+export const getAppDataDirectory = (): string => {
+    return APP_DATA_ROOT;
+};
 
 export const getLastInstallPath = (): string | undefined => {
     return config.get('lastInstallPath') as string | undefined;
@@ -36,4 +60,32 @@ export const getLastInstallPath = (): string | undefined => {
 
 export const setLastInstallPath = (path: string): void => {
     config.set('lastInstallPath', path);
+};
+// Check if the application is running in portable mode (no uninstaller found)
+export const isPortableMode = (): boolean => {
+    // In dev mode (running via node), we might not have unins000.exe, effectively acting like portable or dev
+    if (process.env.NODE_ENV === 'development') {
+        return true;
+    }
+    const appRoot = path.dirname(process.execPath);
+    const uninstallerPath = path.join(appRoot, 'unins000.exe');
+    return !fs.existsSync(uninstallerPath);
+};
+
+export const getSilentModeEnabled = (): boolean => {
+    const silentFile = path.join(APP_DATA_ROOT, '.silent_mode');
+    return fs.existsSync(silentFile);
+};
+
+export const setSilentModeEnabled = (enabled: boolean): void => {
+    const silentFile = path.join(APP_DATA_ROOT, '.silent_mode');
+    if (enabled) {
+        if (!fs.existsSync(silentFile)) {
+            try { fs.writeFileSync(silentFile, ''); } catch (e) { console.error(e); }
+        }
+    } else {
+        if (fs.existsSync(silentFile)) {
+            try { fs.unlinkSync(silentFile); } catch (e) { console.error(e); }
+        }
+    }
 };

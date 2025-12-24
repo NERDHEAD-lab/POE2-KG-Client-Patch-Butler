@@ -21,10 +21,27 @@ export async function parseLog(installPath: string): Promise<LogParseResult> {
     const logFilePath = path.join(installPath, 'logs', 'KakaoClient.txt');
 
     if (!fs.existsSync(logFilePath)) {
-        throw new Error(`Log file not found at: ${logFilePath}`);
+        throw new Error(`로그 파일을 찾을 수 없습니다: ${logFilePath}`);
     }
 
-    const content = await fs.promises.readFile(logFilePath, 'utf-8');
+    // Optimize: Read only last 2MB to avoid Invalid string length error
+    const stats = await fs.promises.stat(logFilePath);
+    const fileSize = stats.size;
+    const READ_SIZE = 2 * 1024 * 1024; // 2MB
+
+    let content = '';
+
+    if (fileSize <= READ_SIZE) {
+        content = await fs.promises.readFile(logFilePath, 'utf-8');
+    } else {
+        const buffer = Buffer.alloc(READ_SIZE);
+        const handle = await fs.promises.open(logFilePath, 'r');
+        await handle.read(buffer, 0, READ_SIZE, fileSize - READ_SIZE);
+        await handle.close();
+        content = buffer.toString('utf-8');
+        // Ensure we don't start with a partial line (though split behavior handles it somewhat, better to be clean if possible, but existing logic seeks 'KAKAO LOG FILE OPENING' so it self-corrects)
+    }
+
     const lines = content.split('\n');
 
     let webRoot: string | null = null;
@@ -66,7 +83,7 @@ export async function parseLog(installPath: string): Promise<LogParseResult> {
             continue;
         }
 
-        if (line.includes('[WARN') || line.includes('[ERROR') || line.includes('Error:')) {
+        if (line.includes('Transferred a partial file')) {
             hasError = true;
         }
 
@@ -108,7 +125,7 @@ export async function parseLog(installPath: string): Promise<LogParseResult> {
 
 export function generateForcePatchResult(baseResult: LogParseResult): LogParseResult {
     if (!baseResult.webRoot) {
-        throw new Error('Web Root not found in log. Cannot force patch.');
+        throw new Error('로그에서 Web Root 정보를 찾을 수 없어 강제 패치를 진행할 수 없습니다.');
     }
     return {
         ...baseResult,
@@ -132,5 +149,5 @@ export async function checkLogForErrors(): Promise<LogParseResult> {
         return parseLog(regPath);
     }
 
-    throw new Error('Install path not found');
+    throw new Error('설치 경로를 찾을 수 없습니다.');
 }

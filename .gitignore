@@ -121,3 +121,4 @@ release/
 guide
 scripts/temp_download
 poe2-patch-butler.exe
+.agent/workflows/workspace-rule.md

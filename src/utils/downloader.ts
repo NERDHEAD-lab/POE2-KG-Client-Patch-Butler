@@ -1,6 +1,7 @@
 import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
+import { notifyBackupCreated } from './backupObserver.js';
 
 export interface DownloadResult {
     success: boolean;
@@ -100,24 +101,38 @@ export async function downloadFile(
             const isLastAttempt = attempt === MAX_RETRIES;
             if (isLastAttempt) {
                 const status = err.response?.status ? ` (Status: ${err.response.status})` : '';
-                throw new Error(`Failed to download from "${url}"${status}: ${err.message}`);
+                throw new Error(`"${url}" 다운로드 실패${status}: ${err.message}`);
             }
         }
     }
 }
 
+import { getBackupEnabled } from './config.js';
+
+// ... (existing imports)
+
 export async function downloadFiles(
     webRoot: string,
     backupWebRoot: string,
     files: string[],
+    clientVersion: string,
     installPath: string,
     onStatus: StatusCallback
 ): Promise<DownloadResult> {
     const CONCURRENCY_LIMIT = 2;
     const tempDir = path.join(installPath, '.patch_temp');
+    // Prepare backup directory if enabled
+    const isBackupEnabled = getBackupEnabled();
+    const backupDir = path.join(installPath, '.patch_backups');
 
     if (!fs.existsSync(tempDir)) {
         await fs.promises.mkdir(tempDir, { recursive: true });
+    }
+
+    if (isBackupEnabled) {
+        if (!fs.existsSync(backupDir)) {
+            await fs.promises.mkdir(backupDir, { recursive: true });
+        }
     }
 
     const queue = [...files];
@@ -136,8 +151,6 @@ export async function downloadFiles(
         while (queue.length > 0) {
             if (activePromises.length < CONCURRENCY_LIMIT) {
                 const file = queue.shift();
-                if (!file) break;
-
                 if (!file) break;
 
                 // 봇 탐지 우회 및 서버 부하 분산을 위한 랜덤 지연 (Jitter)
@@ -191,26 +204,73 @@ export async function downloadFiles(
             return { success: false, failures };
         }
 
+        // Helper for Korean Error Messages
+        const getFriendlyErrorMessage = (error: any): string => {
+            // ... (existing helper)
+            const msg = error instanceof Error ? error.message : String(error);
+            const code = (error as any).code;
+
+            if (code === 'EBUSY') {
+                return `파일이 현재 사용 중이라 접근할 수 없습니다. (EBUSY)\n게임이나 관련 프로그램이 켜져 있는지 확인해 주세요.`;
+            }
+            if (code === 'EPERM' || code === 'EACCES') {
+                return `파일 권한이 부족합니다. (EACCES)\n관리자 권한으로 실행해 보세요.`;
+            }
+            if (code === 'ENOENT') {
+                return `파일 경로를 찾을 수 없습니다. (${code})`;
+            }
+            if (code === 'ENOSPC') {
+                return `디스크 공간이 부족합니다. (${code})`;
+            }
+
+            return msg;
+        };
+
+        let backupCount = 0;
+
         // 임시 폴더에서 설치 경로로 이동
         for (const file of files) {
             const tempPath = path.join(tempDir, file);
             const finalPath = path.join(installPath, file);
 
-            if (fs.existsSync(tempPath)) {
-                const finalDir = path.dirname(finalPath);
-                if (!fs.existsSync(finalDir)) {
-                    await fs.promises.mkdir(finalDir, { recursive: true });
-                }
+            try {
+                if (fs.existsSync(tempPath)) {
+                    const finalDir = path.dirname(finalPath);
+                    if (!fs.existsSync(finalDir)) {
+                        await fs.promises.mkdir(finalDir, { recursive: true });
+                    }
 
-                await fs.promises.copyFile(tempPath, finalPath);
-                // 안전을 위해 원본은 임시 폴더에 유지하고, 사용자가 삭제 여부를 결정하도록 함
+                    // BACKUP LOGIC
+                    if (isBackupEnabled && fs.existsSync(finalPath)) {
+                        const backupPath = path.join(backupDir, file);
+                        const backupFileDir = path.dirname(backupPath);
+                        if (!fs.existsSync(backupFileDir)) {
+                            await fs.promises.mkdir(backupFileDir, { recursive: true });
+                        }
+                        await fs.promises.copyFile(finalPath, backupPath);
+                        backupCount++;
+                    }
+
+                    await fs.promises.copyFile(tempPath, finalPath);
+                    // 안전을 위해 원본은 임시 폴더에 유지하고, 사용자가 삭제 여부를 결정하도록 함
+                }
+            } catch (error) {
+                const friendlyMsg = getFriendlyErrorMessage(error);
+                throw new Error(`${file} 설치 중 오류 발생:\n${friendlyMsg}`);
             }
+        }
+
+        // Write version.txt if backups were made or simply if backup mode is on and we finished
+        if (isBackupEnabled) {
+            const versionFilePath = path.join(backupDir, 'version.txt');
+            await fs.promises.writeFile(versionFilePath, clientVersion, 'utf8');
+            notifyBackupCreated();
         }
 
         return { success: true, failures: [] };
 
     } finally {
-        // 자동 삭제 제거: 사용자가 결과 확인 후 직접 삭제/보존 선택
+        // ...
     }
 }
 
