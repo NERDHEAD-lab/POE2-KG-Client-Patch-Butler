@@ -71,3 +71,21 @@ export const isPortableMode = (): boolean => {
     const uninstallerPath = path.join(appRoot, 'unins000.exe');
     return !fs.existsSync(uninstallerPath);
 };
+
+export const getSilentModeEnabled = (): boolean => {
+    const silentFile = path.join(APP_DATA_ROOT, '.silent_mode');
+    return fs.existsSync(silentFile);
+};
+
+export const setSilentModeEnabled = (enabled: boolean): void => {
+    const silentFile = path.join(APP_DATA_ROOT, '.silent_mode');
+    if (enabled) {
+        if (!fs.existsSync(silentFile)) {
+            try { fs.writeFileSync(silentFile, ''); } catch (e) { console.error(e); }
+        }
+    } else {
+        if (fs.existsSync(silentFile)) {
+            try { fs.unlinkSync(silentFile); } catch (e) { console.error(e); }
+        }
+    }
+};

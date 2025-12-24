@@ -192,11 +192,11 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
 
         switch (screen) {
             case 'INIT':
-                return <Init onDone={handleInitDone} onExit={exit} onStatusChange={setInitStatus} onPathDetected={(path) => setInstallPath(path)} />;
+                return <Init onDone={handleInitDone} onExit={exit} onStatusChange={setInitStatus} onPathDetected={(path) => setInstallPath(path)} isAutoFix={initialMode === 'FIX_PATCH'} />;
             case 'MAIN_MENU':
                 return <MainMenu onSelect={handleMenuSelect} onExit={exit} />;
             case 'CASE_1':
-                return <CasePatchFailed installPath={installPath} onGoBack={() => setScreen('MAIN_MENU')} onExit={exit} />;
+                return <CasePatchFailed installPath={installPath} onGoBack={() => setScreen('MAIN_MENU')} onExit={exit} isAutoFix={initialMode === 'FIX_PATCH'} />;
             case 'CASE_2':
                 return <CaseExecuteFailed installPath={installPath} onGoBack={() => setScreen('MAIN_MENU')} onExit={exit} />;
             case 'CASE_3':
@@ -226,6 +226,24 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
             onClick: async (ctx: any) => {
                 const newState = await toggleAutoDetect();
                 ctx.setStatus(newState ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>);
+            }
+        },
+        {
+            keyChar: 'S',
+            description: '자동 진행 모드:',
+            isChild: true,
+            disabled: !isAutoDetectEnabled,
+            initialStatus: <Text color="gray"> Checking...</Text>,
+            onInit: async (ctx: any) => {
+                const { getSilentModeEnabled } = await import('../utils/config.js');
+                const enabled = getSilentModeEnabled();
+                ctx.setStatus(enabled ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>);
+            },
+            onClick: async (ctx: any) => {
+                const { getSilentModeEnabled, setSilentModeEnabled } = await import('../utils/config.js');
+                const current = getSilentModeEnabled();
+                setSilentModeEnabled(!current);
+                ctx.setStatus(!current ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>);
             }
         },
         {

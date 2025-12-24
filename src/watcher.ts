@@ -8,7 +8,7 @@ import path from 'path';
 import Tray from './utils/tray.js';
 import { ICON_BASE64 } from './generated/iconBase64.js';
 import { TRAY_APP_BASE64 } from './generated/trayAppBase64.js';
-import { getAppDataDirectory } from './utils/config.js';
+import { getAppDataDirectory, getSilentModeEnabled } from './utils/config.js';
 import { logger } from './utils/logger.js';
 
 // Keep tray in global scope to prevent garbage collection
@@ -67,6 +67,20 @@ const setupTray = async () => {
 };
 
 const triggerAlert = (): Promise<void> => {
+    // Silent Mode Check
+    if (getSilentModeEnabled()) {
+        logger.info('Silent Mode: Auto-launching fix...');
+        const exePath = process.execPath;
+        const startArgs = ['/c', 'start', 'POE2 Patch Butler', exePath, '--fix-patch'];
+        const fixChild = spawn('cmd', startArgs, {
+            detached: true,
+            stdio: 'ignore',
+            windowsHide: false
+        });
+        fixChild.unref();
+        return Promise.resolve();
+    }
+
     return new Promise((resolve, reject) => {
         // PowerShell script to show Yes/No dialog
         const psScript = "Add-Type -AssemblyName PresentationCore,PresentationFramework; $Result = [System.Windows.MessageBox]::Show('POE2 업데이트 실패가 감지되었습니다. 오류 해결 마법사를 진행 하겠습니까?', 'POE2 Patch Butler', 'YesNo', 'Warning', [System.Windows.MessageBoxResult]::No, [System.Windows.MessageBoxOptions]::DefaultDesktopOnly); if ($Result -eq 'Yes') { exit 0 } else { exit 1 }";

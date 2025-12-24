@@ -14,6 +14,7 @@ export interface SidebarItemConfig {
     initialStatus?: React.ReactNode;
     initialVisible?: boolean;
     isChild?: boolean;
+    disabled?: boolean;
     onInit?: (ctx: SidebarContext) => void | (() => void);
     onClick?: (ctx: SidebarContext) => void;
 }
@@ -76,7 +77,7 @@ const Sidebar: React.FC<SidebarProps> = ({ items, isActive }) => {
 
         items.forEach((item, index) => {
             const state = itemStates[index];
-            if (state && state.visible && item.onClick && item.keyChar) {
+            if (state && state.visible && item.onClick && item.keyChar && !item.disabled) {
                 let triggered = false;
 
                 // Handle F-keys (F1-F12) using key object from Ink
@@ -133,17 +134,21 @@ const Sidebar: React.FC<SidebarProps> = ({ items, isActive }) => {
                             );
                         }
 
+                        const isGray = config.disabled;
+                        const keyColor = isGray ? 'gray' : 'cyan';
+                        const textColor = isGray ? 'gray' : undefined;
+
                         return (
                             <Box key={index} flexDirection="row">
                                 <Box width={6} flexDirection="row">
-                                    {config.isChild && <Text color="gray">{'ㄴ '}</Text>}
+                                    {config.isChild && <Text color="gray">{'ㄴ'}</Text>}
                                     {config.keyChar ? (
-                                        <Text>[<Text color="cyan">{config.keyChar}</Text>]</Text>
+                                        <Text>[<Text color={keyColor}>{config.keyChar}</Text>]</Text>
                                     ) : (
                                         <Text> </Text>
                                     )}
                                 </Box>
-                                <Text>
+                                <Text color={textColor}>
                                     {state.description} {state.status}
                                 </Text>
                             </Box>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Box, Text, useInput } from 'ink';
 import { getInstallPath } from '../utils/registry.js';
 import { getAppVersion } from '../utils/version.js';
-import { getLastInstallPath, setLastInstallPath } from '../utils/config.js';
+import { getLastInstallPath, setLastInstallPath, getSilentModeEnabled } from '../utils/config.js';
 import { isProcessRunning } from '../utils/process.js';
 import { PathInput } from './PathInput.js';
 
@@ -11,9 +11,10 @@ interface InitProps {
     onExit: () => void;
     onStatusChange?: (status: 'LOADING' | 'CONFIRM' | 'INPUT') => void;
     onPathDetected?: (path: string) => void;
+    isAutoFix?: boolean;
 }
 
-const Init: React.FC<InitProps> = ({ onDone, onExit, onStatusChange, onPathDetected }) => {
+const Init: React.FC<InitProps> = ({ onDone, onExit, onStatusChange, onPathDetected, isAutoFix = false }) => {
     const [status, setStatus] = useState<'LOADING' | 'PROCESS_CHECK' | 'CONFIRM' | 'INPUT'>('LOADING');
     const [installPath, setInstallPath] = useState<string>('');
     const [version, setVersion] = useState<string>('Checking...'); // 버전 확인 중
@@ -68,6 +69,14 @@ const Init: React.FC<InitProps> = ({ onDone, onExit, onStatusChange, onPathDetec
         setInstallPath(path);
         setLastInstallPath(path);
     };
+
+    // Auto Confirm for Silent Mode
+    useEffect(() => {
+        if (status === 'CONFIRM' && isAutoFix && getSilentModeEnabled()) {
+            handlePathSet(installPath);
+            onDone(installPath, version);
+        }
+    }, [status, isAutoFix, installPath, version, onDone]);
 
     useInput((input, key) => {
         if (status === 'PROCESS_CHECK') {

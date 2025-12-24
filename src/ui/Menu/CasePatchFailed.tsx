@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Box, Text, useInput } from 'ink';
 import { parseLog, LogParseResult, generateForcePatchResult } from '../../utils/logParser.js';
 import { downloadFiles, cleanupTempDir } from '../../utils/downloader.js';
+import { getAppDataDirectory, getSilentModeEnabled } from '../../utils/config.js';
 import path from 'path';
 import { ProgressBar } from '../ProgressBar.js';
 import { PathInput } from '../PathInput.js';
@@ -10,6 +11,7 @@ interface CasePatchFailedProps {
     installPath: string;
     onGoBack: () => void;
     onExit: () => void;
+    isAutoFix?: boolean;
 }
 
 type Step = 'ANALYZING' | 'CONFIRM_FORCE' | 'READY_TO_DOWNLOAD' | 'EDIT_WEBROOT' | 'DOWNLOADING' | 'DONE' | 'ERROR';
@@ -20,7 +22,8 @@ const extractVersion = (url: string | null): string | null => {
     return match ? match[1] : null;
 };
 
-const CasePatchFailed: React.FC<CasePatchFailedProps> = ({ installPath, onGoBack, onExit }) => {
+const CasePatchFailed: React.FC<CasePatchFailedProps> = ({ installPath, onGoBack, onExit, isAutoFix = false }) => {
+    const [isSilent] = useState(getSilentModeEnabled());
     const [step, setStep] = useState<Step>('ANALYZING');
     const [error, setError] = useState<string>('');
     const [logResult, setLogResult] = useState<LogParseResult | null>(null);
@@ -28,6 +31,7 @@ const CasePatchFailed: React.FC<CasePatchFailedProps> = ({ installPath, onGoBack
     const [downloadResult, setDownloadResult] = useState<{ success: boolean; failures: { fileName: string; error: Error }[] } | null>(null);
     const [cleanupStatus, setCleanupStatus] = useState<'pending' | 'cleaning' | 'done' | 'kept'>('pending');
     const [editWebRoot, setEditWebRoot] = useState<string>('');
+    const [countdown, setCountdown] = useState<number | null>(null);
 
     useEffect(() => {
         if (step === 'ANALYZING') {
@@ -90,6 +94,49 @@ const CasePatchFailed: React.FC<CasePatchFailedProps> = ({ installPath, onGoBack
         }
     }, [step, logResult, installPath]);
 
+    // Silent Mode Automation
+    useEffect(() => {
+        if (!isSilent || !isAutoFix) return;
+
+        if (step === 'CONFIRM_FORCE' && logResult) {
+            // Auto Force
+            try {
+                const newResult = generateForcePatchResult(logResult);
+                setLogResult(newResult);
+                const initialStates: any = {};
+                newResult.filesToDownload.forEach(f => {
+                    initialStates[f] = { status: 'waiting', progress: 0 };
+                });
+                setFileStates(initialStates);
+                setStep('READY_TO_DOWNLOAD');
+            } catch (e) {
+                setError(e instanceof Error ? e.message : String(e));
+                setStep('ERROR');
+            }
+        } else if (step === 'READY_TO_DOWNLOAD') {
+            // Auto Download
+            setTimeout(() => setStep('DOWNLOADING'), 500);
+        } else if (step === 'DONE' && cleanupStatus === 'pending') {
+            // Auto Cleanup
+            setCleanupStatus('cleaning');
+            cleanupTempDir(installPath).then(() => setCleanupStatus('done'));
+        }
+    }, [isSilent, step, logResult, cleanupStatus, installPath]);
+
+    // Auto Exit Countdown
+    useEffect(() => {
+        if (step === 'DONE' && cleanupStatus === 'done' && isSilent && isAutoFix) {
+            if (countdown === null) {
+                setCountdown(5);
+            } else if (countdown > 0) {
+                const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+                return () => clearTimeout(timer);
+            } else {
+                onExit();
+            }
+        }
+    }, [step, cleanupStatus, isSilent, isAutoFix, countdown, onExit]);
+
     useInput((input, key) => {
         if (step === 'CONFIRM_FORCE') {
             if (input === 'f' || input === 'F') {
@@ -134,7 +181,11 @@ const CasePatchFailed: React.FC<CasePatchFailedProps> = ({ installPath, onGoBack
                 }
             } else {
                 if (input || key.return || key.escape || key.backspace || key.delete) {
-                    onGoBack();
+                    if (isAutoFix) {
+                        onExit();
+                    } else {
+                        onGoBack();
+                    }
                 }
             }
         } else if (step === 'ERROR') {
@@ -157,6 +208,10 @@ const CasePatchFailed: React.FC<CasePatchFailedProps> = ({ installPath, onGoBack
                 </Box>
             )}
 
+            {step === 'CONFIRM_FORCE' && isSilent && isAutoFix && logResult && (
+                <Text color="yellow">자동 복구 모드: 패치 오류 수정 진행 중...</Text>
+            )}
+
             {step === 'READY_TO_DOWNLOAD' && logResult && (
                 <Box flexDirection="column">
                     <Text color="green">분석 완료!</Text>
@@ -172,6 +227,12 @@ const CasePatchFailed: React.FC<CasePatchFailedProps> = ({ installPath, onGoBack
                     <Text>다운로드를 시작하려면 <Text bold color="cyan">Enter</Text></Text>
                     <Text>버전(URL)을 수정하려면 <Text bold color="cyan">E</Text></Text>
                     <Text>초기 메뉴로 돌아가려면 <Text bold color="cyan">Q</Text></Text>
+                </Box>
+            )}
+
+            {step === 'READY_TO_DOWNLOAD' && isSilent && isAutoFix && logResult && (
+                <Box flexDirection="column">
+                    <Text color="green">분석 완료. 자동 다운로드 준비 중...</Text>
                 </Box>
             )}
 
@@ -237,7 +298,15 @@ const CasePatchFailed: React.FC<CasePatchFailedProps> = ({ installPath, onGoBack
                         {cleanupStatus === 'done' && (
                             <Box flexDirection="column">
                                 <Text color="green">임시 폴더가 삭제되었습니다.</Text>
-                                <Text>초기 메뉴로 돌아가려면 <Text bold color="cyan">아무 키</Text>나 누르세요.</Text>
+                                {isAutoFix ? (
+                                    isSilent ? (
+                                        <Text color="yellow">모든 작업이 완료되었습니다. {countdown}초 후 종료합니다.</Text>
+                                    ) : (
+                                        <Text>종료하려면 <Text bold color="cyan">아무 키</Text>나 누르세요.</Text>
+                                    )
+                                ) : (
+                                    <Text>초기 메뉴로 돌아가려면 <Text bold color="cyan">아무 키</Text>나 누르세요.</Text>
+                                )}
                             </Box>
                         )}
                         {cleanupStatus === 'kept' && (
