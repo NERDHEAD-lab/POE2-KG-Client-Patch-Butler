@@ -147,23 +147,21 @@ export const startWatcher = async () => {
                 const minutes = duration / 1000 / 60;
 
                 logger.info(`Duration: ${minutes.toFixed(2)} minutes`);
+            }
 
-                if (minutes < 5) {
-                    logger.info('Short session detected. Checking logs...');
-                    // Check logs
-                    try {
-                        const logResult = await checkLogForErrors();
-                        if (logResult.hasError) {
-                            logger.warn('Error detected in logs!');
-                            // Trigger alert
-                            await triggerAlert();
-                        } else {
-                            logger.info('No error found in logs.');
-                        }
-                    } catch (e) {
-                        logger.error('Failed to check logs: ' + e);
-                    }
+            logger.info('Checking logs for potential errors...');
+            // Check logs
+            try {
+                const logResult = await checkLogForErrors();
+                if (logResult.hasError) {
+                    logger.warn('Error detected in logs!');
+                    // Trigger alert
+                    await triggerAlert();
+                } else {
+                    logger.info('No error found in logs.');
                 }
+            } catch (e) {
+                logger.error('Failed to check logs: ' + e);
             }
             startTime = null;
         }

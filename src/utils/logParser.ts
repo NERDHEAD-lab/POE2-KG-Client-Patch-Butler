@@ -83,7 +83,7 @@ export async function parseLog(installPath: string): Promise<LogParseResult> {
             continue;
         }
 
-        if (line.includes('[WARN') || line.includes('[ERROR') || line.includes('Error:')) {
+        if (line.includes('Transferred a partial file')) {
             hasError = true;
         }
 
