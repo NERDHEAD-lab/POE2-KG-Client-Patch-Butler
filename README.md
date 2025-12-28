@@ -1,4 +1,6 @@
 <!-- prettier-ignore-start -->
+![Total Downloads](https://img.shields.io/github/downloads/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/total?style=for-the-badge&color=success)
+![Latest Downloads](https://img.shields.io/github/downloads/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/latest/total?style=for-the-badge&color=success)
 
 | GitHub Release                                                 | Build Status                                             | License                                                        | Sponsors                                                          | Buy Me a Coffee                                                   |
 |----------------------------------------------------------------|----------------------------------------------------------|----------------------------------------------------------------|-------------------------------------------------------------------|-------------------------------------------------------------------|
