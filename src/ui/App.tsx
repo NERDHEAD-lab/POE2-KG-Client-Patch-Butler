@@ -7,7 +7,7 @@ import CasePatchFailed from './Menu/CasePatchFailed.js';
 import CaseExecuteFailed from './Menu/CaseExecuteFailed.js';
 import CaseCrashing from './Menu/CaseCrashing.js';
 import CaseReportIssue from './Menu/CaseReportIssue.js';
-import Sidebar from './Sidebar.js';
+import Sidebar, { SidebarItemConfig } from './Sidebar.js';
 import OutputBox from './OutputBox.js';
 import RainbowText from './RainbowText.js';
 import { getAppVersion } from '../utils/version.js';
@@ -19,6 +19,7 @@ import { spawn } from 'child_process';
 import path from 'path';
 import os from 'os';
 import { logger } from '../utils/logger.js';
+import { getSilentModeEnabled } from '../utils/config.js';
 
 type Screen = 'INIT' | 'MAIN_MENU' | 'CASE_1' | 'CASE_2' | 'CASE_3' | 'CASE_0';
 
@@ -210,19 +211,11 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
 
     const isInputActive = !(screen === 'INIT' && initStatus === 'INPUT');
 
-    const sidebarItems: any[] = [
+    const sidebarItems: SidebarItemConfig[] = React.useMemo(() => [
         {
             keyChar: 'A',
             description: '오류 자동 감지:',
-            initialStatus: <Text color="gray"> Checking...</Text>,
-            onInit: async (ctx: any) => {
-                const enabled = await import('../utils/autoDetect.js').then(m => m.isAutoDetectRegistryEnabled());
-                setIsAutoDetectEnabled(enabled);
-                ctx.setStatus(enabled ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>);
-                if (enabled) {
-                    import('../utils/autoDetect.js').then(m => m.restartWatcher());
-                }
-            },
+            initialStatus: isAutoDetectEnabled ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>,
             onClick: async (ctx: any) => {
                 const newState = await toggleAutoDetect();
                 ctx.setStatus(newState ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>);
@@ -234,8 +227,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
             isChild: true,
             disabled: !isAutoDetectEnabled,
             initialStatus: <Text color="gray"> Checking...</Text>,
-            onInit: async (ctx: any) => {
-                const { getSilentModeEnabled } = await import('../utils/config.js');
+            onInit: (ctx: any) => {
                 const enabled = getSilentModeEnabled();
                 ctx.setStatus(enabled ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>);
             },
@@ -362,25 +354,28 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
             keyChar: 'U',
             description: '',
             initialVisible: false,
-            onInit: async (ctx: any) => {
-                if (process.env.NODE_ENV === 'development') {
-                    return;
-                }
+            onInit: (ctx: any) => {
+                (async () => {
+                    if (process.env.NODE_ENV === 'development') {
+                        return;
+                    }
 
-                logger.info('업데이트 확인 중...');
-                const res = await checkForUpdate();
-                if (res.hasUpdate && res.downloadUrl) {
-                    logger.info(`새 업데이트 발견: v${res.latestVersion}`);
-                    setUpdateInfo({ url: res.downloadUrl, version: res.latestVersion, updateType: res.updateType });
-                    ctx.setVisible(true);
-                    ctx.setStatus(<Text color="green">업데이트 ({appVersion} {'->'} {res.latestVersion})</Text>);
-                } else {
-                    logger.info('최신 버전입니다.');
-                }
+                    logger.info('업데이트 확인 중...');
+                    const res = await checkForUpdate();
+                    if (res.hasUpdate && res.downloadUrl) {
+                        logger.info(`새 업데이트 발견: v${res.latestVersion}`);
+                        setUpdateInfo({ url: res.downloadUrl, version: res.latestVersion, updateType: res.updateType });
+                        ctx.setVisible(true);
+                        ctx.setStatus(<Text color="green">업데이트 ({appVersion} {'->'} {res.latestVersion})</Text>);
+                    } else {
+                        logger.info('최신 버전입니다.');
+                        // setInitStatus('CONFIRM'); // To allow user to proceed
+                    }
+                })();
             },
             onClick: () => handleUpdate()
         }
-    ];
+    ], [isAutoDetectEnabled, installPath, appVersion]);
 
     return (
         <Box flexDirection="column" padding={1} minHeight={dimensions.rows} width={dimensions.columns}>
