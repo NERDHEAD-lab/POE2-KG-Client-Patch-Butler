@@ -54,8 +54,12 @@ const setupTray = async () => {
         });
 
         const quitItem = await tray.item("종료 (Quit)", {
-            action: () => {
+            action: async () => {
                 logger.info("Quitting via Tray...");
+                try {
+                    const { stopServer } = await import('./utils/server.js');
+                    stopServer();
+                } catch (e) { }
                 process.exit(0);
             }
         });

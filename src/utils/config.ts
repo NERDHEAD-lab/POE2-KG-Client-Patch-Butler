@@ -89,3 +89,12 @@ export const setSilentModeEnabled = (enabled: boolean): void => {
         }
     }
 };
+
+export const getAutoLaunchGameEnabled = (): boolean => {
+    return (config.get('AutoLaunchGame') as boolean) || false;
+};
+
+export const setAutoLaunchGameEnabled = (enabled: boolean): void => {
+    config.set('AutoLaunchGame', enabled);
+};
+
