@@ -142,12 +142,12 @@ const CasePatchFailed: React.FC<CasePatchFailedProps> = ({ installPath, onGoBack
 
                         logger.info(`[AutoLaunch] 게임 자동 시작 시도... (Port: ${serverPort})`);
                         
-                        // ACK Listener
                         let verified = false;
                         const ackListener = () => {
+                            if (verified) return;
                             verified = true;
-                            logger.success('[AutoLaunch] 확장 프로그램으로부터 실행 확인(ACK)을 받았습니다. 3초 후 종료합니다.');
-                            setCountdown(3);
+                            logger.success('[AutoLaunch] 확장 프로그램으로부터 실행 확인(ACK)을 받았습니다. 5초 후 종료합니다.');
+                            setCountdown(5);
                         };
                         onExtensionAck(ackListener);
 
@@ -155,18 +155,24 @@ const CasePatchFailed: React.FC<CasePatchFailedProps> = ({ installPath, onGoBack
                         const targetUrl = `https://pathofexile2.game.daum.net/main?butler=${serverPort}#autoStart`;
                         spawn('cmd', ['/c', 'start', targetUrl], { windowsVerbatimArguments: true });
 
-                        // Timeout Check (15s)
+                        // ACK Timeout Check (5s)
                         setTimeout(() => {
                             if (!verified) {
-                                logger.error('[AutoLaunch] 확장 프로그램 응답 시간 초과! (설치되지 않았거나 오류 발생)');
-                                logger.warn('[AutoLaunch] "게임 자동 시작" 옵션을 자동으로 비활성화합니다.');
+                                logger.error('[AutoLaunch] 5초간 확장 프로그램 응답이 없습니다.');
+                                logger.warn('[AutoLaunch] "게임 자동 시작" 옵션을 자동으로 비활성화하고 5초 후 종료합니다.');
                                 setAutoLaunchGameEnabled(false);
-                                setError('확장 프로그램 응답 없음 (Timeout). 자동 시작이 해제되었습니다.');
-                                setStep('ERROR');
+                                // Start 5s countdown for exit (Total 10s passed from start)
+                                setCountdown(5);
                             }
-                        }, 15000);
+                        }, 5000);
                     };
                     performAutoLaunch();
+                }
+
+                if (countdown !== null && countdown <= 5) {
+                    const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+                    if (countdown === 0) onExit();
+                    return () => clearTimeout(timer);
                 }
                 return;
             }
