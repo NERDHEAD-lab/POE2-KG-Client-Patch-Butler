@@ -354,7 +354,11 @@ const CasePatchFailed: React.FC<CasePatchFailedProps> = ({ installPath, onGoBack
                                 <Text color="green">임시 폴더가 삭제되었습니다.</Text>
                                 {isAutoFix ? (
                                     isSilent ? (
-                                        <Text color="yellow">모든 작업이 완료되었습니다. {countdown}초 후 종료합니다.</Text>
+                                        <Text color="yellow">
+                                            {countdown && countdown > 60 
+                                                ? "게임 실행 여부를 확인하고 있습니다..." 
+                                                : `모든 작업이 완료되었습니다. ${countdown}초 후 종료합니다.`}
+                                        </Text>
                                     ) : (
                                         <Text>종료하려면 <Text bold color="cyan">아무 키</Text>나 누르세요.</Text>
                                     )
