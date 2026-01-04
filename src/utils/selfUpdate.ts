@@ -3,6 +3,7 @@ import path from 'path';
 import os from 'os';
 import { spawn } from 'child_process';
 import { logger } from './logger.js';
+import { stopServer } from './server.js';
 
 /**
  * Creates a temporary batch script to replace the current executable with the new one.
@@ -52,6 +53,7 @@ del "%~f0"
         child.unref();
 
         // Exit immediately to allow the file to be overwritten
+        stopServer();
         process.exit(0);
     } catch (err) {
         logger.error('Failed to start self-update: ' + err);

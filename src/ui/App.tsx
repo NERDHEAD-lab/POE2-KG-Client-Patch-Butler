@@ -7,26 +7,29 @@ import CasePatchFailed from './Menu/CasePatchFailed.js';
 import CaseExecuteFailed from './Menu/CaseExecuteFailed.js';
 import CaseCrashing from './Menu/CaseCrashing.js';
 import CaseReportIssue from './Menu/CaseReportIssue.js';
-import Sidebar from './Sidebar.js';
+import Sidebar, { SidebarItemConfig } from './Sidebar.js';
 import OutputBox from './OutputBox.js';
 import RainbowText from './RainbowText.js';
 import { getAppVersion } from '../utils/version.js';
-import { getBackupEnabled, setBackupEnabled } from '../utils/config.js';
 import { checkForUpdate } from '../utils/updater.js';
 import { performSelfUpdate } from '../utils/selfUpdate.js';
 import { downloadFile } from '../utils/downloader.js';
-import { spawn } from 'child_process';
-import path from 'path';
-import os from 'os';
+import { spawn } from 'node:child_process';
+import path from 'node:path';
+import os from 'node:os';
 import { logger } from '../utils/logger.js';
+import { onExtensionEnableAutoLaunch } from '../utils/server.js';
+import { getAutoLaunchGameEnabled, setAutoLaunchGameEnabled, getSilentModeEnabled, getBackupEnabled, setBackupEnabled } from '../utils/config.js';
+import { isAutoDetectRegistryEnabled, restartWatcher, stopWatcherProcess, enableAutoDetectRegistry, disableAutoDetectRegistry } from '../utils/autoDetect.js';
 
 type Screen = 'INIT' | 'MAIN_MENU' | 'CASE_1' | 'CASE_2' | 'CASE_3' | 'CASE_0';
 
 interface AppProps {
     initialMode?: 'NORMAL' | 'FIX_PATCH';
+    serverPort?: number;
 }
 
-const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
+const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => {
     const { exit } = useApp();
     const { stdout } = useStdout();
     const [dimensions, setDimensions] = useState({
@@ -53,8 +56,62 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
     const [installPath, setInstallPath] = useState('');
     const [appVersion, setAppVersion] = useState(getAppVersion());
 
+    // Extension Connection State
+    const [isExtensionConnected, setIsExtensionConnected] = useState(false);
+
+    // Unified App States for Sidebar
+    const [isAutoDetectEnabled, setIsAutoDetectEnabled] = useState(false);
+    const [isSilentModeEnabled, setIsSilentModeEnabled] = useState(false);
+    const [isAutoLaunchGameEnabled, setIsAutoLaunchGameEnabled] = useState(false);
+    const [isBackupModeEnabled, setIsBackupModeEnabled] = useState(false);
+
+    useEffect(() => {
+        // Listen for enabled signal
+        onExtensionEnableAutoLaunch(() => {
+            logger.info('Auto Launch enabled signal received! Updating UI...');
+            setAutoLaunchGameEnabled(true);
+            setIsAutoLaunchGameEnabled(true);
+        });
+    }, []);
+
+    useEffect(() => {
+        // Subscribe to extension verification
+        import('../utils/server.js').then(({ onExtensionVerified }) => {
+            onExtensionVerified(() => {
+                setIsExtensionConnected(true);
+                // Can initiate auto-launch logic here if needed later
+            });
+        });
+    }, []);
+
     // Server Notice
     const [serverNotice, setServerNotice] = useState<string | null>(null);
+
+    useEffect(() => {
+        const initAppStates = async () => {
+            try {
+                // Initialize from Registry/Config
+                const autoDetect = await isAutoDetectRegistryEnabled();
+                const silent = getSilentModeEnabled();
+                const autoLaunch = getAutoLaunchGameEnabled();
+                const backup = getBackupEnabled();
+
+                setIsAutoDetectEnabled(autoDetect);
+                setIsSilentModeEnabled(silent);
+                setIsAutoLaunchGameEnabled(autoLaunch);
+                setIsBackupModeEnabled(backup);
+
+                if (autoDetect) {
+                    logger.info('Registry: Auto-detect ON. Starting watcher process...');
+                    await restartWatcher();
+                    logger.success('Watcher process started with --watch');
+                }
+            } catch (e) {
+                logger.error('Failed to initialize app states: ' + e);
+            }
+        };
+        initAppStates();
+    }, []);
 
     const handleInitDone = (path: string, version: string) => {
         setInstallPath(path);
@@ -72,7 +129,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
     const [initStatus, setInitStatus] = useState<'LOADING' | 'PROCESS_CHECK' | 'CONFIRM' | 'INPUT' | null>(null);
 
     React.useEffect(() => {
-        logger.info(`App Initialized (v${getAppVersion()})`);
+        logger.info(`App Initialized (v${getAppVersion()})` + (serverPort ? ` [Server: ${serverPort}]` : ''));
 
         // Fetch Server Notice
         const fetchNotice = async () => {
@@ -129,12 +186,8 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
         spawn('cmd', ['/c', 'start', url], { windowsVerbatimArguments: true });
     };
 
-    // Auto-detect toggle
-    const [isAutoDetectEnabled, setIsAutoDetectEnabled] = useState(false);
 
     const toggleAutoDetect = async () => {
-        const { enableAutoDetectRegistry, disableAutoDetectRegistry, startWatcherProcess, stopWatcherProcess } = await import('../utils/autoDetect.js');
-
         if (isAutoDetectEnabled) {
             // Turning OFF
             await disableAutoDetectRegistry();
@@ -146,7 +199,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
             // Turning ON
             try {
                 await enableAutoDetectRegistry();
-                startWatcherProcess();
+                await restartWatcher(); // Use restart for clean start
                 setIsAutoDetectEnabled(true);
                 logger.success('자동 감지 기능을 켰습니다. 업데이트 실패 시 자동으로 해결합니다.');
                 return true;
@@ -155,6 +208,19 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
                 return false;
             }
         }
+    };
+
+    const handleAppExit = async () => {
+        logger.info('종료 중... 서버를 중지합니다.');
+        try {
+            const { stopServer } = await import('../utils/server.js');
+            stopServer();
+            logger.success('정리 완료.');
+        } catch (e) {
+            // Ignore exit errors
+        }
+        exit();
+        process.exit(0);
     };
 
     useInput((input, key) => {
@@ -192,13 +258,15 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
 
         switch (screen) {
             case 'INIT':
-                return <Init onDone={handleInitDone} onExit={exit} onStatusChange={setInitStatus} onPathDetected={(path) => setInstallPath(path)} isAutoFix={initialMode === 'FIX_PATCH'} />;
+                return <Init onDone={handleInitDone} onExit={handleAppExit} onStatusChange={setInitStatus} onPathDetected={(path) => setInstallPath(path)} isAutoFix={initialMode === 'FIX_PATCH'} />;
             case 'MAIN_MENU':
-                return <MainMenu onSelect={handleMenuSelect} onExit={exit} />;
+                return <MainMenu onSelect={handleMenuSelect} onExit={handleAppExit} />;
             case 'CASE_1':
-                return <CasePatchFailed installPath={installPath} onGoBack={() => setScreen('MAIN_MENU')} onExit={exit} isAutoFix={initialMode === 'FIX_PATCH'} />;
+                // Pass auto-launch config
+                const { getAutoLaunchGameEnabled } = require('../utils/config.js');
+                return <CasePatchFailed installPath={installPath} onGoBack={() => setScreen('MAIN_MENU')} onExit={handleAppExit} isAutoFix={initialMode === 'FIX_PATCH'} isAutoLaunch={getAutoLaunchGameEnabled()} serverPort={serverPort} />;
             case 'CASE_2':
-                return <CaseExecuteFailed installPath={installPath} onGoBack={() => setScreen('MAIN_MENU')} onExit={exit} />;
+                return <CaseExecuteFailed installPath={installPath} onGoBack={() => setScreen('MAIN_MENU')} onExit={handleAppExit} />;
             case 'CASE_3':
                 return <CaseCrashing onGoBack={() => setScreen('MAIN_MENU')} />;
             case 'CASE_0':
@@ -210,21 +278,14 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
 
     const isInputActive = !(screen === 'INIT' && initStatus === 'INPUT');
 
-    const sidebarItems: any[] = [
+    const sidebarItems: SidebarItemConfig[] = React.useMemo(() => [
         {
             keyChar: 'A',
             description: '오류 자동 감지:',
-            initialStatus: <Text color="gray"> Checking...</Text>,
-            onInit: async (ctx: any) => {
-                const enabled = await import('../utils/autoDetect.js').then(m => m.isAutoDetectRegistryEnabled());
-                setIsAutoDetectEnabled(enabled);
-                ctx.setStatus(enabled ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>);
-                if (enabled) {
-                    import('../utils/autoDetect.js').then(m => m.restartWatcher());
-                }
-            },
+            initialStatus: isAutoDetectEnabled ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>,
             onClick: async (ctx: any) => {
                 const newState = await toggleAutoDetect();
+                setIsAutoDetectEnabled(newState);
                 ctx.setStatus(newState ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>);
             }
         },
@@ -233,31 +294,39 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
             description: '자동 진행 모드:',
             isChild: true,
             disabled: !isAutoDetectEnabled,
-            initialStatus: <Text color="gray"> Checking...</Text>,
-            onInit: async (ctx: any) => {
-                const { getSilentModeEnabled } = await import('../utils/config.js');
-                const enabled = getSilentModeEnabled();
-                ctx.setStatus(enabled ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>);
-            },
+            initialStatus: isSilentModeEnabled ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>,
             onClick: async (ctx: any) => {
-                const { getSilentModeEnabled, setSilentModeEnabled } = await import('../utils/config.js');
-                const current = getSilentModeEnabled();
-                setSilentModeEnabled(!current);
-                ctx.setStatus(!current ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>);
+                const { setSilentModeEnabled } = await import('../utils/config.js');
+                const newState = !isSilentModeEnabled;
+                setSilentModeEnabled(newState);
+                setIsSilentModeEnabled(newState);
+                ctx.setStatus(newState ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>);
+            }
+        },
+        {
+            keyChar: 'G',
+            description: '게임 자동 시작:',
+            isChild: true,
+            disabled: !isAutoDetectEnabled,
+            initialStatus: isAutoLaunchGameEnabled ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>,
+            onClick: async (ctx: any) => {
+                if (isAutoLaunchGameEnabled) {
+                    setAutoLaunchGameEnabled(false);
+                    setIsAutoLaunchGameEnabled(false);
+                    ctx.setStatus(<Text color="red"> OFF</Text>);
+                } else {
+                    spawn('cmd', ['/c', 'start', '""', `\"https://nerdhead-lab.github.io/POE2-quick-launch-for-kakao/butler.html?ext_port=${serverPort}&action=enable_auto_launch\"`], { windowsVerbatimArguments: true });
+                }
             }
         },
         {
             keyChar: 'B',
             description: '패치 백업 모드:',
-            initialStatus: <Text color="gray"> Checking...</Text>,
-            onInit: (ctx: any) => {
-                const enabled = getBackupEnabled();
-                ctx.setStatus(enabled ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>);
-            },
+            initialStatus: isBackupModeEnabled ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>,
             onClick: async (ctx: any) => {
-                const current = getBackupEnabled();
-                const newState = !current;
+                const newState = !isBackupModeEnabled;
                 setBackupEnabled(newState);
+                setIsBackupModeEnabled(newState);
 
                 if (!newState && installPath) {
                     const { deleteBackup } = await import('../utils/restore.js');
@@ -362,25 +431,28 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
             keyChar: 'U',
             description: '',
             initialVisible: false,
-            onInit: async (ctx: any) => {
-                if (process.env.NODE_ENV === 'development') {
-                    return;
-                }
+            onInit: (ctx: any) => {
+                (async () => {
+                    if (process.env.NODE_ENV === 'development') {
+                        return;
+                    }
 
-                logger.info('업데이트 확인 중...');
-                const res = await checkForUpdate();
-                if (res.hasUpdate && res.downloadUrl) {
-                    logger.info(`새 업데이트 발견: v${res.latestVersion}`);
-                    setUpdateInfo({ url: res.downloadUrl, version: res.latestVersion, updateType: res.updateType });
-                    ctx.setVisible(true);
-                    ctx.setStatus(<Text color="green">업데이트 ({appVersion} {'->'} {res.latestVersion})</Text>);
-                } else {
-                    logger.info('최신 버전입니다.');
-                }
+                    logger.info('업데이트 확인 중...');
+                    const res = await checkForUpdate();
+                    if (res.hasUpdate && res.downloadUrl) {
+                        logger.info(`새 업데이트 발견: v${res.latestVersion}`);
+                        setUpdateInfo({ url: res.downloadUrl, version: res.latestVersion, updateType: res.updateType });
+                        ctx.setVisible(true);
+                        ctx.setStatus(<Text color="green">업데이트 ({appVersion} {'->'} {res.latestVersion})</Text>);
+                    } else {
+                        logger.info('최신 버전입니다.');
+                        // setInitStatus('CONFIRM'); // To allow user to proceed
+                    }
+                })();
             },
             onClick: () => handleUpdate()
         }
-    ];
+    ], [isAutoDetectEnabled, isSilentModeEnabled, isAutoLaunchGameEnabled, isBackupModeEnabled, installPath, serverPort, appVersion]);
 
     return (
         <Box flexDirection="column" padding={1} minHeight={dimensions.rows} width={dimensions.columns}>
@@ -413,7 +485,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL' }) => {
 
                 {/* Sidebar (Right) */}
                 <Sidebar
-                    key={installPath} // Force remount when installPath is ready to refresh async status
+                    key={`${installPath}-${isAutoDetectEnabled}-${isSilentModeEnabled}-${isAutoLaunchGameEnabled}-${isBackupModeEnabled}-${isExtensionConnected}`} // Force remount on foundational state changes
                     isActive={isInputActive}
                     items={sidebarItems} />
             </Box>

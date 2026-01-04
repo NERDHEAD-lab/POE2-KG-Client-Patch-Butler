@@ -12,6 +12,8 @@ interface CasePatchFailedProps {
     onGoBack: () => void;
     onExit: () => void;
     isAutoFix?: boolean;
+    isAutoLaunch?: boolean;
+    serverPort?: number;
 }
 
 type Step = 'ANALYZING' | 'CONFIRM_FORCE' | 'READY_TO_DOWNLOAD' | 'EDIT_WEBROOT' | 'DOWNLOADING' | 'DONE' | 'ERROR';
@@ -22,7 +24,7 @@ const extractVersion = (url: string | null): string | null => {
     return match ? match[1] : null;
 };
 
-const CasePatchFailed: React.FC<CasePatchFailedProps> = ({ installPath, onGoBack, onExit, isAutoFix = false }) => {
+const CasePatchFailed: React.FC<CasePatchFailedProps> = ({ installPath, onGoBack, onExit, isAutoFix = false, isAutoLaunch = false, serverPort = 0 }) => {
     const [isSilent] = useState(getSilentModeEnabled());
     const [step, setStep] = useState<Step>('ANALYZING');
     const [error, setError] = useState<string>('');
@@ -123,19 +125,71 @@ const CasePatchFailed: React.FC<CasePatchFailedProps> = ({ installPath, onGoBack
         }
     }, [isSilent, step, logResult, cleanupStatus, installPath]);
 
-    // Auto Exit Countdown
+    // Auto Exit Countdown & Auto Launch Logic
     useEffect(() => {
-        if (step === 'DONE' && cleanupStatus === 'done' && isSilent && isAutoFix) {
-            if (countdown === null) {
-                setCountdown(5);
-            } else if (countdown > 0) {
-                const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-                return () => clearTimeout(timer);
-            } else {
-                onExit();
+        if (step === 'DONE' && cleanupStatus === 'done' && isAutoFix) {
+            
+            // 1. Auto Launch Logic
+            if (isAutoLaunch) {
+                if (countdown === null) {
+                    setCountdown(999); // "Waiting" State
+                    
+                    const performAutoLaunch = async () => {
+                        const { logger } = await import('../../utils/logger.js');
+                        const { spawn } = await import('child_process');
+                        const { onExtensionAck } = await import('../../utils/server.js');
+                        const { setAutoLaunchGameEnabled } = await import('../../utils/config.js');
+
+                        logger.info(`[AutoLaunch] 게임 자동 시작 시도... (Port: ${serverPort})`);
+                        
+                        let verified = false;
+                        const ackListener = () => {
+                            if (verified) return;
+                            verified = true;
+                            logger.success('[AutoLaunch] 확장 프로그램으로부터 실행 확인(ACK)을 받았습니다. 5초 후 종료합니다.');
+                            setCountdown(5);
+                        };
+                        onExtensionAck(ackListener);
+
+                        // Call URL
+                        const targetUrl = `https://pathofexile2.game.daum.net/main?butler=${serverPort}#autoStart`;
+                        spawn('cmd', ['/c', 'start', targetUrl], { windowsVerbatimArguments: true });
+
+                        // ACK Timeout Check (5s)
+                        setTimeout(() => {
+                            if (!verified) {
+                                logger.error('[AutoLaunch] 5초간 확장 프로그램 응답이 없습니다.');
+                                logger.warn('[AutoLaunch] "게임 자동 시작" 옵션을 자동으로 비활성화하고 5초 후 종료합니다.');
+                                setAutoLaunchGameEnabled(false);
+                                // Start 5s countdown for exit (Total 10s passed from start)
+                                setCountdown(5);
+                            }
+                        }, 5000);
+                    };
+                    performAutoLaunch();
+                }
+
+                if (countdown !== null && countdown <= 5) {
+                    const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+                    if (countdown === 0) onExit();
+                    return () => clearTimeout(timer);
+                }
+                return;
+            }
+
+            // 2. Silent Mode Auto Exit (Original Logic)
+            if (isSilent && !isAutoLaunch) {
+                if (countdown === null) {
+                    setCountdown(5);
+                } else if (countdown > 0) {
+                    const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+                    return () => clearTimeout(timer);
+                } else {
+                    onExit();
+                }
             }
         }
-    }, [step, cleanupStatus, isSilent, isAutoFix, countdown, onExit]);
+    }, [step, cleanupStatus, isSilent, isAutoFix, countdown, onExit, isAutoLaunch]);
 
     useInput((input, key) => {
         if (step === 'CONFIRM_FORCE') {
@@ -300,7 +354,11 @@ const CasePatchFailed: React.FC<CasePatchFailedProps> = ({ installPath, onGoBack
                                 <Text color="green">임시 폴더가 삭제되었습니다.</Text>
                                 {isAutoFix ? (
                                     isSilent ? (
-                                        <Text color="yellow">모든 작업이 완료되었습니다. {countdown}초 후 종료합니다.</Text>
+                                        <Text color="yellow">
+                                            {countdown && countdown > 60 
+                                                ? "게임 실행 여부를 확인하고 있습니다..." 
+                                                : `모든 작업이 완료되었습니다. ${countdown}초 후 종료합니다.`}
+                                        </Text>
                                     ) : (
                                         <Text>종료하려면 <Text bold color="cyan">아무 키</Text>나 누르세요.</Text>
                                     )

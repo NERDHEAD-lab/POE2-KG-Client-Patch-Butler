@@ -54,8 +54,12 @@ const setupTray = async () => {
         });
 
         const quitItem = await tray.item("종료 (Quit)", {
-            action: () => {
+            action: async () => {
                 logger.info("Quitting via Tray...");
+                try {
+                    const { stopServer } = await import('./utils/server.js');
+                    stopServer();
+                } catch (e) { }
                 process.exit(0);
             }
         });
@@ -128,42 +132,51 @@ export const startWatcher = async () => {
     let isRunning = false;
     let startTime: number | null = null;
 
-    // Poll every 5 seconds
-    setInterval(async () => {
-        const currentlyRunning = await isProcessRunning('POE2_Launcher.exe');
+    const runCheck = async () => {
+        try {
+            const currentlyRunning = await isProcessRunning('POE2_Launcher.exe');
 
-        if (currentlyRunning && !isRunning) {
-            // Process started
-            logger.info('POE2_Launcher started.');
-            isRunning = true;
-            startTime = Date.now();
-        } else if (!currentlyRunning && isRunning) {
-            // Process ended
-            logger.info('POE2_Launcher ended.');
-            isRunning = false;
+            if (currentlyRunning && !isRunning) {
+                // Process started
+                logger.info('POE2_Launcher started.');
+                isRunning = true;
+                startTime = Date.now();
+            } else if (!currentlyRunning && isRunning) {
+                // Process ended
+                logger.info('POE2_Launcher ended.');
+                isRunning = false;
 
-            if (startTime) {
-                const duration = Date.now() - startTime;
-                const minutes = duration / 1000 / 60;
+                if (startTime) {
+                    const duration = Date.now() - startTime;
+                    const minutes = duration / 1000 / 60;
 
-                logger.info(`Duration: ${minutes.toFixed(2)} minutes`);
-            }
-
-            logger.info('Checking logs for potential errors...');
-            // Check logs
-            try {
-                const logResult = await checkLogForErrors();
-                if (logResult.hasError) {
-                    logger.warn('Error detected in logs!');
-                    // Trigger alert
-                    await triggerAlert();
-                } else {
-                    logger.info('No error found in logs.');
+                    logger.info(`Duration: ${minutes.toFixed(2)} minutes`);
                 }
-            } catch (e) {
-                logger.error('Failed to check logs: ' + e);
+
+                logger.info('Checking logs for potential errors...');
+                // Check logs
+                try {
+                    const logResult = await checkLogForErrors();
+                    if (logResult.hasError) {
+                        logger.warn('Error detected in logs!');
+                        // Trigger alert
+                        await triggerAlert();
+                    } else {
+                        logger.info('No error found in logs.');
+                    }
+                } catch (e) {
+                    logger.error('Failed to check logs: ' + e);
+                }
+                startTime = null;
             }
-            startTime = null;
+        } catch (e) {
+            logger.error('Watcher loop error: ' + e);
+        } finally {
+            // Schedule next check
+            setTimeout(runCheck, 5000);
         }
-    }, 5000);
+    };
+
+    // Start loop
+    runCheck();
 };
