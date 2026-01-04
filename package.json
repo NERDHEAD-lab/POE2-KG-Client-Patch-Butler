@@ -11,6 +11,7 @@
         "build": "tsc",
         "bundle": "tsup",
         "package": "node scripts/build-exe.js",
+        "package:force": "taskkill /F /IM poe2-patch-butler.exe /T 2>nul || echo No process found & npm run package",
         "dev": "ts-node src/cli.tsx",
         "start": "node dist/cli.cjs",
         "test": "echo \"Error: no test specified\" && exit 1",

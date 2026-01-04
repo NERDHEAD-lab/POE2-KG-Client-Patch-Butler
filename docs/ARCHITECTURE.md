@@ -21,14 +21,13 @@
 ### Build Commands
 
 - `npm run dev`: 개발 모드 실행 (`ts-node`)
-- `npm run package`: **(권장)** 빌드, 번들링, 실행 파일(`exe`) 생성을 한 번에 수행
+- `npm run package:force`: **(권장)** 실행 중인 툴 프로세스를 강제 종료하고 패키징 수행 (파일 잠금 방지)
+- `npm run package`: 일반 빌드 및 패키징 (프로세스가 꺼져있을 때 사용)
 - `npm run build`: TypeScript 컴파일 (Type Check 용도)
 - `npm run bundle`: Tsup을 이용한 번들링 (개별 실행 불필요)
 
-> [!IMPORTANT] > **패키징 필수 절차 (Mandatory)** > `npm run package` 명령을 실행하기 전에, 반드시 기존 `poe2-patch-butler.exe` 프로세스를 종료해야 합니다.
->
-> 1. **프로세스 종료**: `taskkill /F /IM poe2-patch-butler.exe`
-> 2. **빌드 실행**: `npm run package` (이 명령어 하나로 빌드/번들/패키징 완료)
+> [!TIP] > **빌드 시 `npm run package:force` 사용 권장**
+> 이 명령어는 기존에 실행 중인 `poe2-patch-butler.exe`를 자동으로 안전하게 종료한 후 빌드를 진행하므로, 파일 잠금(File Lock) 오류를 근본적으로 방지합니다.
 
 ## 2. Directory Structure
 
@@ -81,11 +80,11 @@ Node.js 및 TypeScript 표준 컨벤션을 따릅니다.
 - **Status**: Accepted
 - **Date**: 2026-01-04
 
-### ADR-002: Simplified Build Process
+### ADR-002: Automated Build & Process Cleanup
 
-- **Context**: 사용자 피드백에 따라 빌드 프로세스의 효율성과 안정성을 높일 필요가 있음. 불필요한 개별 커맨드 실행을 줄이고, 파일 잠금(File Lock)으로 인한 빌드 실패를 방지해야 함.
+- **Context**: 빌드 시 실행 중인 툴 프로세스로 인한 파일 잠금(File Lock) 오류가 빈번하게 발생하여 빌드 안정성이 떨어짐.
 - **Decision**:
-  1. `npm run package`를 단일 빌드 명령어로 표준화 (내부적으로 `bundle` 포함).
-  2. 빌드 전 `poe2-patch-butler.exe` 프로세스 강제 종료(`taskkill`)를 필수 절차로 규정.
+  1. `npm run package:force` 명령어를 신설하여 표준 빌드 방식으로 채택.
+  2. 해당 명령어는 `taskkill`을 통해 기존 프로세스를 선제적으로 정리한 후 패키징을 수행하도록 자동화함.
 - **Status**: Accepted
-- **Date**: 2026-01-04
+- **Date**: 2026-01-05
