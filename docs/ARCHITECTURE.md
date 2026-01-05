@@ -120,3 +120,13 @@ Node.js 및 TypeScript 표준 컨벤션을 따릅니다.
   2. 새로운 UI 기능을 개발할 때는 반드시 이 레지스트리를 먼저 확인하고, 신규 키 할당 시 문서를 동기화하여 업데이트해야 함.
 - **Status**: Accepted
 - **Date**: 2026-01-05
+
+### ADR-004: UI Component State Lifting Strategy
+
+- **Context**: `Sidebar` 컴포넌트는 UI 일관성 유지를 위해 주요 상태 변경 시 **Remount(재생성)** 되도록 설계됨. 이로 인해 `onInit` 내부에 포함된 API 호출(업데이트 확인 등)이 불필요하게 반복 실행되는 문제가 발생함.
+- **Decision**:
+  1. `Sidebar`와 같은 Presentational Component는 **Side Effect(API 호출 등)를 직접 수행하지 않도록 함**.
+  2. 데이터 Fetching 및 Business Logic은 상위 컴포넌트(`App.tsx`)나 별도의 `State Store`로 **Lift Up(상태 끌어올리기)** 하여 수행하고, `Sidebar`는 결과값만 Props로 받아 렌더링하도록 강제함.
+  3. 이를 명확히 하기 위해 `Sidebar.tsx`의 `onInit` 정의에 경고 주석을 추가함.
+- **Status**: Accepted
+- **Date**: 2026-01-05

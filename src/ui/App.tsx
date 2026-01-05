@@ -184,7 +184,29 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
                 // Ignore parsing errors or network failures
             }
         };
+
         fetchNotice();
+
+        const checkUpdate = async () => {
+            if (process.env.NODE_ENV === 'development') return;
+            
+            // logger.info('업데이트 확인 중...'); // Silent check or keep it? User prefers less noise maybe.
+            try {
+                const res = await checkForUpdate();
+                if (res.hasUpdate && res.downloadUrl) {
+                    logger.info(`새 업데이트 발견: v${res.latestVersion}`);
+                    setUpdateInfo({ url: res.downloadUrl, version: res.latestVersion, updateType: res.updateType });
+                } else {
+                    // logger.info('최신 버전입니다.'); // Silent success to avoid spamming output box on reload? 
+                    // Or keep it but now it only runs ONCE on app launch, which is fine.
+                    // Let's comment it out to be cleaner, or log to console only if we had one.
+                    // logger.success('최신 버전입니다.');
+                }
+            } catch (e) {
+                // Ignore update check fail
+            }
+        };
+        checkUpdate();
     }, []);
 
     const handleUpdate = () => {
@@ -523,26 +545,8 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
         {
             keyChar: 'U',
             description: '',
-            initialVisible: false,
-            onInit: (ctx: any) => {
-                (async () => {
-                    if (process.env.NODE_ENV === 'development') {
-                        return;
-                    }
-
-                    logger.info('업데이트 확인 중...');
-                    const res = await checkForUpdate();
-                    if (res.hasUpdate && res.downloadUrl) {
-                        logger.info(`새 업데이트 발견: v${res.latestVersion}`);
-                        setUpdateInfo({ url: res.downloadUrl, version: res.latestVersion, updateType: res.updateType });
-                        ctx.setVisible(true);
-                        ctx.setStatus(<Text color="green">업데이트 ({appVersion} {'->'} {res.latestVersion})</Text>);
-                    } else {
-                        logger.info('최신 버전입니다.');
-                        // setInitStatus('CONFIRM'); // To allow user to proceed
-                    }
-                })();
-            },
+            initialVisible: !!updateInfo,
+            initialStatus: updateInfo ? <Text color="green">업데이트 ({appVersion} {'->'} {updateInfo.version})</Text> : null,
             onClick: () => handleUpdate()
         }
     ], [isAutoDetectEnabled, isSilentModeEnabled, isAutoLaunchGameEnabled, isBackupModeEnabled, installPath, serverPort, appVersion]);

@@ -15,6 +15,15 @@ export interface SidebarItemConfig {
     initialVisible?: boolean;
     isChild?: boolean;
     disabled?: boolean;
+    /**
+     * Called when the Sidebar item initializes.
+     * 
+     * [!WARNING]
+     * The Sidebar component is frequently REMOUNTED when App state changes (to reset UI).
+     * This `onInit` will re-run every time.
+     * DO NOT put expensive or non-idempotent one-time logic (like App update checks) here.
+     * Lift such state up to `App.tsx` instead.
+     */
     onInit?: (ctx: SidebarContext) => void | (() => void);
     onClick?: (ctx: SidebarContext) => void;
 }
