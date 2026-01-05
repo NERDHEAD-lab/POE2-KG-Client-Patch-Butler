@@ -7,6 +7,8 @@ import CasePatchFailed from './Menu/CasePatchFailed.js';
 import CaseExecuteFailed from './Menu/CaseExecuteFailed.js';
 import CaseCrashing from './Menu/CaseCrashing.js';
 import CaseReportIssue from './Menu/CaseReportIssue.js';
+import CaseGameRunning from './Menu/CaseGameRunning.js';
+import { isProcessRunning } from '../utils/process.js';
 import Sidebar, { SidebarItemConfig } from './Sidebar.js';
 import OutputBox from './OutputBox.js';
 import RainbowText from './RainbowText.js';
@@ -22,7 +24,7 @@ import { onExtensionEnableAutoLaunch } from '../utils/server.js';
 import { getAutoLaunchGameEnabled, setAutoLaunchGameEnabled, getSilentModeEnabled, getBackupEnabled, setBackupEnabled } from '../utils/config.js';
 import { isAutoDetectRegistryEnabled, restartWatcher, stopWatcherProcess, enableAutoDetectRegistry, disableAutoDetectRegistry } from '../utils/autoDetect.js';
 
-type Screen = 'INIT' | 'MAIN_MENU' | 'CASE_1' | 'CASE_2' | 'CASE_3' | 'CASE_0';
+type Screen = 'INIT' | 'MAIN_MENU' | 'CASE_1' | 'CASE_2' | 'CASE_3' | 'CASE_0' | 'GAME_WARNING';
 
 interface AppProps {
     initialMode?: 'NORMAL' | 'FIX_PATCH';
@@ -53,8 +55,12 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
 
     // Always start at INIT to ensure installPath is loaded context correctly
     const [screen, setScreen] = useState<Screen>('INIT');
+    const [previousScreen, setPreviousScreen] = useState<Screen | null>(null);
     const [installPath, setInstallPath] = useState('');
     const [appVersion, setAppVersion] = useState(getAppVersion());
+
+    // Game Process Detection State
+    const [lastGameStatus, setLastGameStatus] = useState(false);
 
     // Extension Connection State
     const [isExtensionConnected, setIsExtensionConnected] = useState(false);
@@ -127,6 +133,32 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
     const [isUpdating, setIsUpdating] = useState(false);
     const [downloadProgress, setDownloadProgress] = useState(0);
     const [initStatus, setInitStatus] = useState<'LOADING' | 'PROCESS_CHECK' | 'CONFIRM' | 'INPUT' | null>(null);
+
+    // Runtime Game Detection Polling
+    useEffect(() => {
+        const checkGameProcess = async () => {
+            // Only poll if we are past the INIT screen and NOT already in the warning screen
+            // User requested to start this AFTER Init (Launcher Check) is done.
+            if (screen === 'INIT' || screen === 'GAME_WARNING') return;
+
+            const isGameRunning = await isProcessRunning('PathOfExile_KG.exe');
+
+            // Detect OFF -> ON transition
+            if (!lastGameStatus && isGameRunning) {
+                setPreviousScreen(screen);
+                setScreen('GAME_WARNING');
+            }
+
+            setLastGameStatus(isGameRunning);
+        };
+
+        const intervalId = setInterval(checkGameProcess, 3000); // Check every 3 seconds
+        
+        // Initial check immediately to set baseline
+        checkGameProcess();
+
+        return () => clearInterval(intervalId);
+    }, [screen, lastGameStatus]); // Dependencies: re-run if screen changes to avoid stale state issues, though careful with interval
 
     React.useEffect(() => {
         logger.info(`App Initialized (v${getAppVersion()})` + (serverPort ? ` [Server: ${serverPort}]` : ''));
@@ -246,6 +278,17 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
         }
     };
 
+    const handleIgnoreGameWarning = () => {
+        if (previousScreen) {
+            setScreen(previousScreen);
+            setPreviousScreen(null);
+            // We set lastGameStatus to true naturally by the next poll, or we can force it here to prevent immediate re-trigger if logic was synchronous
+            setLastGameStatus(true); 
+        } else {
+            setScreen('MAIN_MENU'); // Fallback
+        }
+    };
+
     const renderBody = () => {
         if (isUpdating) {
             return (
@@ -271,6 +314,8 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
                 return <CaseCrashing onGoBack={() => setScreen('MAIN_MENU')} />;
             case 'CASE_0':
                 return <CaseReportIssue onGoBack={() => setScreen('MAIN_MENU')} />;
+            case 'GAME_WARNING':
+                return <CaseGameRunning onIgnore={handleIgnoreGameWarning} onExit={handleAppExit} />;
             default:
                 return null;
         }

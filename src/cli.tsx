@@ -41,7 +41,7 @@ try {
     const { startServer } = await import('./utils/server.js');
     serverPort = (await startServer()) as number;
 } catch (e) {
-    logger.error('Failed to start local server:', e);
+    logger.error('Failed to start local server: ' + String(e));
 }
 
 if (cli.flags.watch) {

@@ -63,6 +63,29 @@ Node.js 및 TypeScript 표준 컨벤션을 따릅니다.
 - **Error Handling**: 비동기 작업에 대해 `try-catch` 블록 필수 사용 및 적절한 사용자 피드백(UI) 제공
 - **Registry**: `winreg`를 감싼 유틸리티 클래스를 통해 일관된 레지스트리 접근 제어
 
+### Key Mappings (Reserved)
+
+키 입력 충돌 방지를 위해 현재 사용 중인 단축키를 명시합니다. 새로운 기능을 추가할 때 본 목록에 없는 키를 사용해야 합니다.
+
+| Key        | Context   | Description                |
+| :--------- | :-------- | :------------------------- |
+| **A**      | Sidebar   | 오류 자동 감지 Toggle      |
+| **S**      | Sidebar   | 자동 진행 모드 Toggle      |
+| **G**      | Sidebar   | 게임 자동 시작 Toggle      |
+| **B**      | Sidebar   | 패치 백업 모드 Toggle      |
+| **U**      | Sidebar   | 업데이트 확인 (Hidden)     |
+| **R**      | Sidebar   | 백업 복구 (Hidden)         |
+| **P**      | Sidebar   | 패치노트 확인              |
+| **W**      | Sidebar   | 작동원리                   |
+| **I**      | Sidebar   | 피드백 (Issue)             |
+| **H**      | Sidebar   | 자주 묻는 질문 (FAQ)       |
+| **/**      | Sidebar   | 후원하기                   |
+| **Enter**  | Init/Menu | 선택 및 확인               |
+| **E**      | Init      | 경로 수정                  |
+| **Q**      | Global    | 프로그램 종료              |
+| **F**      | Init      | **무시하고 진행 (Ignore)** |
+| **1~3, 0** | MainMenu  | 메뉴 선택                  |
+
 ## 4. Glossary & Terminology
 
 프로젝트 내에서 사용하는 주요 명칭 및 별칭입니다.
@@ -86,5 +109,14 @@ Node.js 및 TypeScript 표준 컨벤션을 따릅니다.
 - **Decision**:
   1. `npm run package:force` 명령어를 신설하여 표준 빌드 방식으로 채택.
   2. 해당 명령어는 `taskkill`을 통해 기존 프로세스를 선제적으로 정리한 후 패키징을 수행하도록 자동화함.
+- **Status**: Accepted
+- **Date**: 2026-01-05
+
+### ADR-003: Centralized Key Mapping Registry
+
+- **Context**: 기능이 추가됨에 따라 단축키(Shortcut) 충돌 위험이 증가하고 있음(예: `I` 키가 Feedback과 Ignore에 중복 할당될 뻔함). 소스 코드를 일일이 확인하지 않고도 사용 가능한 키를 식별할 수 있는 메커니즘이 필요함.
+- **Decision**:
+  1. `ARCHITECTURE.md` 내에 **Key Mappings** 섹션을 신설하여 프로젝트의 'Single Source of Truth'로 관리함.
+  2. 새로운 UI 기능을 개발할 때는 반드시 이 레지스트리를 먼저 확인하고, 신규 키 할당 시 문서를 동기화하여 업데이트해야 함.
 - **Status**: Accepted
 - **Date**: 2026-01-05

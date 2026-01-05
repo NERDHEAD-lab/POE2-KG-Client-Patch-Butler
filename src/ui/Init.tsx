@@ -26,8 +26,9 @@ const Init: React.FC<InitProps> = ({ onDone, onExit, onStatusChange, onPathDetec
     }, [status, onStatusChange]);
 
     const checkProcessAndInit = async () => {
-        const isRunning = await isProcessRunning('POE2_Launcher.exe');
-        if (isRunning) {
+        const isLauncherRunning = await isProcessRunning('POE2_Launcher.exe');
+
+        if (isLauncherRunning) {
             setStatus('PROCESS_CHECK');
         } else {
             // Process not running, proceed to init
@@ -85,6 +86,9 @@ const Init: React.FC<InitProps> = ({ onDone, onExit, onStatusChange, onPathDetec
                 checkProcessAndInit();
             } else if (input === 'q' || input === 'Q') {
                 onExit();
+            } else if (input === 'f' || input === 'F') {
+                // Ignore warning
+                init();
             }
         } else if (status === 'CONFIRM') {
             if (key.return) {
@@ -108,8 +112,9 @@ const Init: React.FC<InitProps> = ({ onDone, onExit, onStatusChange, onPathDetec
                 <Text color="red" bold>⚠️ 경고: POE2_Launcher.exe가 실행 중입니다.</Text>
                 <Text>파일 패치를 위해 런처를 완전히 종료해야 합니다.</Text>
                 <Text>작업 관리자(Ctrl+Shift+Esc)에서 프로세스가 정상적으로 종료될 때 까지 대기해주세요. (0 ~ 5분이 소요 될 수 있습니다)</Text>
-                <Box marginTop={1}>
+                <Box marginTop={1} flexDirection="column">
                     <Text>종료 후 다시 확인하려면 <Text bold color="green">Enter</Text></Text>
+                    <Text>무시하고 계속 진행하려면 <Text bold color="yellow">F</Text></Text>
                     <Text>프로그램을 종료하려면 <Text bold color="red">Q</Text></Text>
                 </Box>
             </Box>
