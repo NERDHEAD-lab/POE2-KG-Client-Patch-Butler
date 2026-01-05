@@ -327,15 +327,17 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
 
     const isInputActive = !(screen === 'INIT' && initStatus === 'INPUT');
 
-    const sidebarItems: SidebarItemConfig[] = React.useMemo(() => [
+    const sidebarItems: SidebarItemConfig[] = React.useMemo<SidebarItemConfig[]>(() => [
         {
             keyChar: 'A',
             description: '오류 자동 감지:',
             initialStatus: isAutoDetectEnabled ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>,
-            onClick: async (ctx: any) => {
-                const newState = await toggleAutoDetect();
-                setIsAutoDetectEnabled(newState);
-                ctx.setStatus(newState ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>);
+            onClick: (ctx: any) => {
+                (async () => {
+                    const newState = await toggleAutoDetect();
+                    setIsAutoDetectEnabled(newState);
+                    ctx.setStatus(newState ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>);
+                })();
             }
         },
         {
@@ -344,12 +346,14 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
             isChild: true,
             disabled: !isAutoDetectEnabled,
             initialStatus: isSilentModeEnabled ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>,
-            onClick: async (ctx: any) => {
-                const { setSilentModeEnabled } = await import('../utils/config.js');
-                const newState = !isSilentModeEnabled;
-                setSilentModeEnabled(newState);
-                setIsSilentModeEnabled(newState);
-                ctx.setStatus(newState ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>);
+            onClick: (ctx: any) => {
+                (async () => {
+                    const { setSilentModeEnabled } = await import('../utils/config.js');
+                    const newState = !isSilentModeEnabled;
+                    setSilentModeEnabled(newState);
+                    setIsSilentModeEnabled(newState);
+                    ctx.setStatus(newState ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>);
+                })();
             }
         },
         {
@@ -358,7 +362,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
             isChild: true,
             disabled: !isAutoDetectEnabled,
             initialStatus: isAutoLaunchGameEnabled ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>,
-            onClick: async (ctx: any) => {
+            onClick: (ctx: any) => {
                 if (isAutoLaunchGameEnabled) {
                     setAutoLaunchGameEnabled(false);
                     setIsAutoLaunchGameEnabled(false);
@@ -372,20 +376,22 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
             keyChar: 'B',
             description: '패치 백업 모드:',
             initialStatus: isBackupModeEnabled ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>,
-            onClick: async (ctx: any) => {
-                const newState = !isBackupModeEnabled;
-                setBackupEnabled(newState);
-                setIsBackupModeEnabled(newState);
+            onClick: (ctx: any) => {
+                (async () => {
+                    const newState = !isBackupModeEnabled;
+                    setBackupEnabled(newState);
+                    setIsBackupModeEnabled(newState);
 
-                if (!newState && installPath) {
-                    const { deleteBackup } = await import('../utils/restore.js');
-                    await deleteBackup(installPath);
-                }
+                    if (!newState && installPath) {
+                        const { deleteBackup } = await import('../utils/restore.js');
+                        await deleteBackup(installPath);
+                    }
 
-                const { notifyBackupCreated } = await import('../utils/backupObserver.js');
-                notifyBackupCreated();
+                    const { notifyBackupCreated } = await import('../utils/backupObserver.js');
+                    notifyBackupCreated();
 
-                ctx.setStatus(newState ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>);
+                    ctx.setStatus(newState ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>);
+                })();
             }
         },
         {
@@ -427,16 +433,18 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
                     if (unsubscribe) unsubscribe();
                 };
             },
-            onClick: async (ctx: any) => {
+            onClick: (ctx: any) => {
                 if (!installPath) {
                     logger.error('설치 경로가 설정되지 않았습니다.');
                     return;
                 }
-                const { restoreBackup } = await import('../utils/restore.js');
-                const success = await restoreBackup(installPath);
-                if (success) {
-                    ctx.setStatus(<Text color="green">복구 완료!</Text>);
-                }
+                (async () => {
+                    const { restoreBackup } = await import('../utils/restore.js');
+                    const success = await restoreBackup(installPath);
+                    if (success) {
+                        ctx.setStatus(<Text color="green">복구 완료!</Text>);
+                    }
+                })();
             }
         },
         {
