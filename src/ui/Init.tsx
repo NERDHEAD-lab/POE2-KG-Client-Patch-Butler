@@ -12,9 +12,10 @@ interface InitProps {
     onStatusChange?: (status: 'LOADING' | 'CONFIRM' | 'INPUT') => void;
     onPathDetected?: (path: string) => void;
     isAutoFix?: boolean;
+    forceEdit?: boolean;
 }
 
-const Init: React.FC<InitProps> = ({ onDone, onExit, onStatusChange, onPathDetected, isAutoFix = false }) => {
+const Init: React.FC<InitProps> = ({ onDone, onExit, onStatusChange, onPathDetected, isAutoFix = false, forceEdit = false }) => {
     const [status, setStatus] = useState<'LOADING' | 'PROCESS_CHECK' | 'CONFIRM' | 'INPUT'>('LOADING');
     const [installPath, setInstallPath] = useState<string>('');
     const [version, setVersion] = useState<string>('Checking...'); // 버전 확인 중
@@ -45,6 +46,14 @@ const Init: React.FC<InitProps> = ({ onDone, onExit, onStatusChange, onPathDetec
             if (savedPath) {
                 setInstallPath(savedPath);
                 if (onPathDetected) onPathDetected(savedPath);
+
+                // Start: Auto-skip logic
+                if (!forceEdit) {
+                    onDone(savedPath, appVersion);
+                    return;
+                }
+                // End: Auto-skip logic
+
                 setStatus('CONFIRM');
                 return;
             }

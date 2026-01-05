@@ -62,6 +62,9 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
     // Game Process Detection State
     const [lastGameStatus, setLastGameStatus] = useState(false);
 
+    // Force Init Edit State (Manual Path Change)
+    const [forceInitEdit, setForceInitEdit] = useState(false);
+
     // Extension Connection State
     const [isExtensionConnected, setIsExtensionConnected] = useState(false);
 
@@ -122,6 +125,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
     const handleInitDone = (path: string, version: string) => {
         setInstallPath(path);
         setAppVersion(version);
+        setForceInitEdit(false); // Reset forcing edit
 
         if (initialMode === 'FIX_PATCH') {
             setScreen('CASE_1');
@@ -301,7 +305,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
 
         switch (screen) {
             case 'INIT':
-                return <Init onDone={handleInitDone} onExit={handleAppExit} onStatusChange={setInitStatus} onPathDetected={(path) => setInstallPath(path)} isAutoFix={initialMode === 'FIX_PATCH'} />;
+                return <Init onDone={handleInitDone} onExit={handleAppExit} onStatusChange={setInitStatus} onPathDetected={(path) => setInstallPath(path)} isAutoFix={initialMode === 'FIX_PATCH'} forceEdit={forceInitEdit} />;
             case 'MAIN_MENU':
                 return <MainMenu onSelect={handleMenuSelect} onExit={handleAppExit} />;
             case 'CASE_1':
@@ -433,6 +437,17 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
                 if (success) {
                     ctx.setStatus(<Text color="green">복구 완료!</Text>);
                 }
+            }
+        },
+        {
+            type: 'separator'
+        },
+        {
+            keyChar: 'C',
+            description: '설치 경로 수정',
+            onClick: () => {
+                setForceInitEdit(true);
+                setScreen('INIT');
             }
         },
         {
