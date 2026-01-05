@@ -17,7 +17,7 @@ export const checkForUpdate = async (): Promise<UpdateCheckResult> => {
         const currentVersion = getAppVersion();
 
         if (!latestInfo) {
-            logger.warn('Failed to fetch latest version info.');
+            logger.warn('최신 버전 정보를 가져오는데 실패했습니다.');
             return {
                 hasUpdate: false,
                 latestVersion: '0.0.0',
@@ -43,7 +43,7 @@ export const checkForUpdate = async (): Promise<UpdateCheckResult> => {
 
         // If current version is "unknown" (dev mode), assume no update
         if (currentVersion === 'unknown') {
-            logger.info('Dev mode detected (version unknown). Skipping update check.');
+            logger.info('개발 모드가 감지되었습니다. (버전 불명). 업데이트 확인을 건너뜁니다.');
             return {
                 hasUpdate: false,
                 latestVersion: latestInfo.version,
@@ -54,7 +54,7 @@ export const checkForUpdate = async (): Promise<UpdateCheckResult> => {
         }
 
         if (semver.gt(latestInfo.version, currentVersion)) {
-            logger.info(`Update available: ${currentVersion} -> ${latestInfo.version} (${updateType})`);
+            logger.info(`새로운 업데이트가 있습니다: ${currentVersion} -> ${latestInfo.version} (${updateType})`);
             return {
                 hasUpdate: true,
                 latestVersion: latestInfo.version,
@@ -72,7 +72,7 @@ export const checkForUpdate = async (): Promise<UpdateCheckResult> => {
             releaseNotes: ''
         };
     } catch (error) {
-        logger.error('Update check failed: ' + error);
+        logger.error('업데이트 확인 실패: ' + error);
         return {
             hasUpdate: false,
             latestVersion: '0.0.0',

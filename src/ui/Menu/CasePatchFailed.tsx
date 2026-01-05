@@ -140,13 +140,13 @@ const CasePatchFailed: React.FC<CasePatchFailedProps> = ({ installPath, onGoBack
                         const { onExtensionAck } = await import('../../utils/server.js');
                         const { setAutoLaunchGameEnabled } = await import('../../utils/config.js');
 
-                        logger.info(`[AutoLaunch] 게임 자동 시작 시도... (Port: ${serverPort})`);
+                        logger.info(`[게임 자동 시작] 게임 실행을 시도합니다... (Port: ${serverPort})`);
                         
                         let verified = false;
                         const ackListener = () => {
                             if (verified) return;
                             verified = true;
-                            logger.success('[AutoLaunch] 확장 프로그램으로부터 실행 확인(ACK)을 받았습니다. 5초 후 종료합니다.');
+                            logger.success('[게임 자동 시작] 승인됨: 확장에서 실행을 확인했습니다. 5초 후 종료합니다.');
                             setCountdown(5);
                         };
                         onExtensionAck(ackListener);
@@ -158,8 +158,8 @@ const CasePatchFailed: React.FC<CasePatchFailedProps> = ({ installPath, onGoBack
                         // ACK Timeout Check (5s)
                         setTimeout(() => {
                             if (!verified) {
-                                logger.error('[AutoLaunch] 5초간 확장 프로그램 응답이 없습니다.');
-                                logger.warn('[AutoLaunch] "게임 자동 시작" 옵션을 자동으로 비활성화하고 5초 후 종료합니다.');
+                                logger.error('[게임 자동 시작] 오류: 5초간 확장 프로그램의 응답이 없습니다.');
+                                logger.warn('[게임 자동 시작] 안전을 위해 "게임 자동 시작" 옵션을 끕니다. (5초 후 종료)');
                                 setAutoLaunchGameEnabled(false);
                                 // Start 5s countdown for exit (Total 10s passed from start)
                                 setCountdown(5);

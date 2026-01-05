@@ -111,12 +111,12 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
                 setIsBackupModeEnabled(backup);
 
                 if (autoDetect) {
-                    logger.info('Registry: Auto-detect ON. Starting watcher process...');
+                    logger.info(`오류 자동 감지 설정이 켜져 있습니다. 감시 프로세스를 시작합니다.\n( 실행 경로: ${process.execPath} --watch )`);
                     await restartWatcher();
-                    logger.success('Watcher process started with --watch');
+                    logger.success('감시 프로세스가 실행되었습니다.');
                 }
             } catch (e) {
-                logger.error('Failed to initialize app states: ' + e);
+                logger.error('앱 상태 초기화 실패: ' + e);
             }
         };
         initAppStates();
@@ -165,7 +165,8 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
     }, [screen, lastGameStatus]); // Dependencies: re-run if screen changes to avoid stale state issues, though careful with interval
 
     React.useEffect(() => {
-        logger.info(`App Initialized (v${getAppVersion()})` + (serverPort ? ` [Server: ${serverPort}]` : ''));
+        const serverInfo = serverPort ? ` (Server Port: ${serverPort})` : '';
+        logger.info(`POE2 패치 도우미가 시작되었습니다. v${getAppVersion()}${serverInfo}`);
 
         // Fetch Server Notice
         const fetchNotice = async () => {
@@ -229,7 +230,8 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
             await disableAutoDetectRegistry();
             await stopWatcherProcess();
             setIsAutoDetectEnabled(false);
-            logger.warn('자동 감지 기능을 껐습니다. (Watcher Stopped)');
+            setIsAutoDetectEnabled(false);
+            logger.warn('오류 자동 감지 모드를 껐습니다.');
             return false;
         } else {
             // Turning ON
@@ -237,7 +239,8 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
                 await enableAutoDetectRegistry();
                 await restartWatcher(); // Use restart for clean start
                 setIsAutoDetectEnabled(true);
-                logger.success('자동 감지 기능을 켰습니다. 업데이트 실패 시 자동으로 해결합니다.');
+                 setIsAutoDetectEnabled(true);
+                logger.success(`오류 자동 감지 모드를 켰습니다. ( ${process.execPath} --watch )`);
                 return true;
             } catch (e) {
                 logger.error('자동 감지 설정 실패: ' + e);
