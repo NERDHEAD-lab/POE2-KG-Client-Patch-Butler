@@ -56,7 +56,7 @@ del "%~f0"
         stopServer();
         process.exit(0);
     } catch (err) {
-        logger.error('Failed to start self-update: ' + err);
+        logger.error('자가 업데이트 시작 실패: ' + err);
         throw err;
     }
 };

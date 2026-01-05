@@ -8,7 +8,7 @@ export function getShaderCachePaths(): string[] {
 
     const poe2Path = path.join(appData, 'Path of Exile 2');
     if (!fs.existsSync(poe2Path)) {
-        logger.info(`Shader cache check: '${poe2Path}' does not exist.`);
+        logger.info(`쉐이더 캐시 확인: '${poe2Path}' 경로가 존재하지 않습니다.`);
         return [];
     }
 
@@ -22,7 +22,7 @@ export function getShaderCachePaths(): string[] {
         }
     });
 
-    logger.info(`Shader cache check: Found ${found.length} directories.`);
+    logger.info(`쉐이더 캐시 확인: ${found.length}개의 폴더를 발견했습니다.`);
     return found;
 }
 
@@ -30,11 +30,11 @@ export async function clearShaderCache(paths: string[]): Promise<void> {
     for (const p of paths) {
         if (fs.existsSync(p)) {
             try {
-                logger.info(`Deleting shader cache: ${p}`);
+                logger.info(`쉐이더 캐시 삭제 중: ${p}`);
                 await fs.promises.rm(p, { recursive: true, force: true });
-                logger.success(`Deleted: ${p}`);
+                logger.success(`삭제됨: ${p}`);
             } catch (e) {
-                logger.error(`Failed to delete ${p}: ${e}`);
+                logger.error(`삭제 실패 ${p}: ${e}`);
                 throw e;
             }
         }
