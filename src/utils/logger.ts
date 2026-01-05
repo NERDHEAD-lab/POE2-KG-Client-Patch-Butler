@@ -13,7 +13,6 @@ type LogType = 'info' | 'warn' | 'error' | 'success';
 interface LogEvent {
     message: string;
     type: LogType;
-    duration?: number;
 }
 
 export class Logger extends EventEmitter {
@@ -118,28 +117,28 @@ export class Logger extends EventEmitter {
         }
     }
 
-    log(message: string, type: LogType = 'info', duration: number = 3000) {
+    log(message: string, type: LogType = 'info') {
         // Emit for UI
-        this.emit('log', { message, type, duration });
+        this.emit('log', { message, type });
 
         // Write to file
         this.writeToFile(message, type);
     }
 
-    info(message: string, duration?: number) {
-        this.log(message, 'info', duration);
+    info(message: string) {
+        this.log(message, 'info');
     }
 
-    warn(message: string, duration?: number) {
-        this.log(message, 'warn', duration);
+    warn(message: string) {
+        this.log(message, 'warn');
     }
 
-    error(message: string, duration?: number) {
-        this.log(message, 'error', duration);
+    error(message: string) {
+        this.log(message, 'error');
     }
 
-    success(message: string, duration?: number) {
-        this.log(message, 'success', duration);
+    success(message: string) {
+        this.log(message, 'success');
     }
 }
 
