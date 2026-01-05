@@ -21,13 +21,13 @@
 ### Build Commands
 
 - `npm run dev`: 개발 모드 실행 (`ts-node`)
-- `npm run package:force`: **(권장)** 실행 중인 툴 프로세스를 강제 종료하고 패키징 수행 (파일 잠금 방지)
+- `npm run package:force`: **(필수 검증)** 실행 중인 툴 프로세스를 강제 종료하고 패키징 수행 (파일 잠금 방지). **PR 및 배포 전 반드시 이 명령어로 검증해야 함.**
 - `npm run package`: 일반 빌드 및 패키징 (프로세스가 꺼져있을 때 사용)
 - `npm run build`: TypeScript 컴파일 (Type Check 용도)
 - `npm run bundle`: Tsup을 이용한 번들링 (개별 실행 불필요)
 
-> [!TIP] > **빌드 시 `npm run package:force` 사용 권장**
-> 이 명령어는 기존에 실행 중인 `poe2-patch-butler.exe`를 자동으로 안전하게 종료한 후 빌드를 진행하므로, 파일 잠금(File Lock) 오류를 근본적으로 방지합니다.
+> [!IMPORTANT] > **검증 및 배포 시 `npm run package:force` 필수 사용**
+> 단순 `npm run build`는 타입 체크만 수행합니다. 실제 런타임 안정성과 파일 잠금 문제 해결을 위해 반드시 `package:force`로 검증하십시오.
 
 ## 2. Directory Structure
 
@@ -128,5 +128,15 @@ Node.js 및 TypeScript 표준 컨벤션을 따릅니다.
   1. `Sidebar`와 같은 Presentational Component는 **Side Effect(API 호출 등)를 직접 수행하지 않도록 함**.
   2. 데이터 Fetching 및 Business Logic은 상위 컴포넌트(`App.tsx`)나 별도의 `State Store`로 **Lift Up(상태 끌어올리기)** 하여 수행하고, `Sidebar`는 결과값만 Props로 받아 렌더링하도록 강제함.
   3. 이를 명확히 하기 위해 `Sidebar.tsx`의 `onInit` 정의에 경고 주석을 추가함.
+- **Status**: Accepted
+- **Date**: 2026-01-05
+
+### ADR-005: Mandatory Verification with package:force
+
+- **Context**: 단순 빌드(`npm run build`)는 타입 체크만 수행하므로 실제 런타임 안정성과 파일 잠금(File Lock) 이슈를 검증하기에 불충분함. 특히 개발자가 코드 수정 후 프로세스가 남아있는 상태에서 재빌드 시 잦은 오류가 발생함.
+- **Decision**:
+  1. **모든 코드 수정 후 검증(Verification) 단계**에서는 반드시 `npm run package:force` 명령어를 사용해야 함.
+  2. 에이전트(AI) 또한 구현 완료 후 검증 시 이 명령어를 사용하여, 실제 바이너리 생성 및 프로세스 클린업 여부를 확인해야 함.
+  3. PR 제출 및 배포 전 최종 검증 수단으로 이 명령어를 강제함.
 - **Status**: Accepted
 - **Date**: 2026-01-05
