@@ -356,6 +356,12 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
                     setSilentModeEnabled(newState);
                     setIsSilentModeEnabled(newState);
                     ctx.setStatus(newState ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>);
+                    
+                    if (newState) {
+                        logger.success('자동 진행 모드를 켰습니다.');
+                    } else {
+                        logger.warn('자동 진행 모드를 껐습니다.');
+                    }
                 })();
             }
         },
@@ -370,7 +376,9 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
                     setAutoLaunchGameEnabled(false);
                     setIsAutoLaunchGameEnabled(false);
                     ctx.setStatus(<Text color="red"> OFF</Text>);
+                    logger.warn('게임 자동 시작 설정을 껐습니다.');
                 } else {
+                    logger.info('게임 자동 시작 설정을 켜기 위해 브라우저를 엽니다...');
                     spawn('cmd', ['/c', 'start', '""', `\"https://nerdhead-lab.github.io/POE2-quick-launch-for-kakao/butler.html?ext_port=${serverPort}&action=enable_auto_launch\"`], { windowsVerbatimArguments: true });
                 }
             }
@@ -388,6 +396,9 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
                     if (!newState && installPath) {
                         const { deleteBackup } = await import('../utils/restore.js');
                         await deleteBackup(installPath);
+                        logger.warn('패치 백업 모드를 껐습니다. (기존 백업 삭제)');
+                    } else {
+                        logger.success('패치 백업 모드를 켰습니다.');
                     }
 
                     const { notifyBackupCreated } = await import('../utils/backupObserver.js');
@@ -442,10 +453,14 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
                     return;
                 }
                 (async () => {
+                    logger.info('백업 복구를 시도합니다...');
                     const { restoreBackup } = await import('../utils/restore.js');
                     const success = await restoreBackup(installPath);
                     if (success) {
                         ctx.setStatus(<Text color="green">복구 완료!</Text>);
+                        logger.success('백업 파일이 복구되었습니다.');
+                    } else {
+                        logger.error('백업 복구에 실패했습니다.');
                     }
                 })();
             }
@@ -467,12 +482,16 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
         {
             keyChar: 'P',
             description: '패치노트 확인',
-            onClick: () => handleOpenPatchNotes()
+            onClick: () => {
+                logger.info('패치노트 페이지를 엽니다.');
+                handleOpenPatchNotes();
+            }
         },
         {
             keyChar: 'W',
             description: '작동원리',
             onClick: () => {
+                logger.info('작동원리 설명 페이지를 엽니다.');
                 spawn('cmd', ['/c', 'start', 'https://nerdhead-lab.github.io/POE2-KG-Client-Patch-Butler?docs=PRINCIPLES.md'], { windowsVerbatimArguments: true });
             }
         },
@@ -480,6 +499,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
             keyChar: 'I',
             description: '피드백',
             onClick: () => {
+                logger.info('이슈 제보 페이지를 엽니다.');
                 spawn('cmd', ['/c', 'start', 'https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/issues'], { windowsVerbatimArguments: true });
             }
         },
@@ -487,6 +507,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
             keyChar: 'H',
             description: '자주 묻는 질문',
             onClick: () => {
+                logger.info('자주 묻는 질문 페이지를 엽니다.');
                 spawn('cmd', ['/c', 'start', 'https://nerdhead-lab.github.io/POE2-KG-Client-Patch-Butler?docs=FAQ.md'], { windowsVerbatimArguments: true });
             }
         },
@@ -495,6 +516,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
             keyChar: '/',
             description: '후원하기',
             onClick: () => {
+                logger.info('후원 페이지를 엽니다. 감사합니다!');
                 spawn('cmd', ['/c', 'start', 'https://nerdhead-lab.github.io/POE2-KG-Client-Patch-Butler?docs=SUPPORT.md'], { windowsVerbatimArguments: true });
             }
         },
