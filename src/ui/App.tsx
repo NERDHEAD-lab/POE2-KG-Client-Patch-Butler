@@ -141,21 +141,33 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
     // Runtime Game Detection Polling
     useEffect(() => {
         const checkGameProcess = async () => {
-            // Only poll if we are past the INIT screen and NOT already in the warning screen
-            // User requested to start this AFTER Init (Launcher Check) is done.
-            if (screen === 'INIT' || screen === 'GAME_WARNING') return;
+            if (screen === 'INIT') return;
 
             const isGameRunning = await isProcessRunning('PathOfExile_KG.exe');
 
-            // Detect OFF -> ON transition
-            if (!lastGameStatus && isGameRunning) {
-                setPreviousScreen(screen);
-                setScreen('GAME_WARNING');
+            // 1. Normal Detection: Game OFF -> ON
+            if (screen !== 'GAME_WARNING') {
+                if (!lastGameStatus && isGameRunning) {
+                    setPreviousScreen(screen);
+                    setScreen('GAME_WARNING');
+                }
+            } 
+            // 2. Warning State Logic: Check if Launcher is closed
+            else if (screen === 'GAME_WARNING') {
+                // If the game itself closes, we might want to auto-close too, 
+                // BUT the user specifically asked for "Launcher closes -> Close warning".
+                // (Since closing the launcher usually implies the game session is ending or user gave up)
+                const isLauncherRunning = await isProcessRunning('POE2_Launcher.exe');
+                
+                if (!isLauncherRunning) {
+                     // Auto-dismiss the warning
+                     handleIgnoreGameWarning();
+                }
             }
 
             setLastGameStatus(isGameRunning);
         };
-
+        
         const intervalId = setInterval(checkGameProcess, 3000); // Check every 3 seconds
         
         // Initial check immediately to set baseline
