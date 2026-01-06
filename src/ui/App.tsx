@@ -366,6 +366,10 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
 
     const sidebarItems: SidebarItemConfig[] = React.useMemo<SidebarItemConfig[]>(() => [
         {
+            description: '패치 오류 도구',
+            type: 'separator'
+        },
+        {
             keyChar: 'A',
             description: '오류 자동 감지:',
             initialStatus: isAutoDetectEnabled ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>,
@@ -416,6 +420,10 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
                     spawn('cmd', ['/c', 'start', '""', `\"https://nerdhead-lab.github.io/POE2-quick-launch-for-kakao/butler.html?ext_port=${serverPort}&action=enable_auto_launch\"`], { windowsVerbatimArguments: true });
                 }
             }
+        },
+        {
+            description: '백업 도구',
+            type: 'separator'
         },
         {
             keyChar: 'B',
@@ -500,6 +508,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
             }
         },
         {
+            description: '환경설정',
             type: 'separator'
         },
         {
@@ -511,6 +520,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
             }
         },
         {
+            description: '문서',
             type: 'separator'
         },
         {
