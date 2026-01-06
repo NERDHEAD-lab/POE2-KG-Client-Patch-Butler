@@ -68,16 +68,17 @@ function getCurrentCommand(): Promise<string | null> {
  */
 export async function isUACBypassEnabled(): Promise<boolean> {
     const cmd = await getCurrentCommand();
+    logger.info(`Current command: ${cmd}`);
     if (!cmd) return false;
-    return cmd.toLowerCase().includes('bypass_proxy.bat');
+    return cmd.toLowerCase().includes('proxy.vbs');
 }
 
 /**
  * Enables the UAC Bypass (Task Scheduler Method).
- * 1. Create 'runner.ps1': Reads args from file and starts DaumGameStarter.
- * 2. Create 'bypass_proxy.bat': Writes args to file and triggers Task.
- * 3. Create Scheduled Task: Runs runner.ps1 with Highest Privileges.
- * 4. Update Registry: Point to bypass_proxy.bat.
+ * 1. Create 'runner.vbs': Reads args from file and starts DaumGameStarter.
+ * 2. Create 'proxy.vbs': Writes args to file and triggers Task.
+ * 3. Create Scheduled Task: Runs runner.vbs with Highest Privileges.
+ * 4. Update Registry: Point to proxy.vbs.
  */
 export async function enableUACBypass(): Promise<boolean> {
     const currentCmd = await getCurrentCommand();
@@ -86,7 +87,7 @@ export async function enableUACBypass(): Promise<boolean> {
         return false;
     }
 
-    if (currentCmd.includes('bypass_proxy.bat')) {
+    if (currentCmd.toLowerCase().includes('proxy.vbs')) {
         logger.info('UAC Bypass is already active.');
         return true;
     }
@@ -94,8 +95,8 @@ export async function enableUACBypass(): Promise<boolean> {
     const binDir = getBinDirectory();
     const logsDir = getLogsDirectory();
     
-    const proxyBatPath = join(binDir, 'bypass_proxy.bat');
-    const runnerPs1Path = join(binDir, 'runner.ps1');
+    const proxyVbsPath = join(binDir, 'proxy.vbs');
+    const runnerVbsPath = join(binDir, 'runner.vbs');
     const argsFilePath = join(binDir, 'launch_args.txt');
     const debugLogPath = join(logsDir, 'uac_debug.log');
 
@@ -105,48 +106,77 @@ export async function enableUACBypass(): Promise<boolean> {
         return false;
     }
 
-    // 1. Create runner.ps1
+    // 1. Create runner.vbs (Silent Runner)
     // Reads arguments from file and launches the actual starter
     const runnerScriptContent = `
-$ErrorActionPreference = "Stop"
-try {
-    $argsContent = Get-Content "${argsFilePath}" -Raw
-    # Remove potential surrounding quotes from the argument if doubling occurs, though usually it's just the URL
-    $arg = $argsContent.Trim()
-    
-    "$(Get-Date): [Runner] Starting..." | Out-File -FilePath "${debugLogPath}" -Append -Encoding utf8
-    "$(Get-Date): [Runner] Target Exe: ${daumStarterForScript}" | Out-File -FilePath "${debugLogPath}" -Append -Encoding utf8
-    "$(Get-Date): [Runner] Read arg: $arg" | Out-File -FilePath "${debugLogPath}" -Append -Encoding utf8
+On Error Resume Next
+Set fso = CreateObject("Scripting.FileSystemObject")
+Set shell = CreateObject("WScript.Shell")
 
-    $process = Start-Process -FilePath "${daumStarterForScript}" -ArgumentList $arg -PassThru
-    "$(Get-Date): [Runner] Process Started: ID $($process.Id)" | Out-File -FilePath "${debugLogPath}" -Append -Encoding utf8
-} catch {
-    "$(Get-Date): [Runner] Error: $_" | Out-File -FilePath "${debugLogPath}" -Append -Encoding utf8
-    exit 1
-}
+' Read argument
+Set ts = fso.OpenTextFile("${argsFilePath.replaceAll('\\', '\\\\')}", 1)
+arg = ts.ReadAll
+ts.Close
+arg = Trim(arg)
+
+' Log Execution (UTF-8)
+Set logStream = CreateObject("ADODB.Stream")
+logStream.Type = 2
+logStream.Charset = "utf-8"
+logStream.Open
+logStream.WriteText Now & " [Runner] Starting..." & vbCrLf
+logStream.WriteText Now & " [Runner] Target Exe: ${daumStarterForScript.replaceAll('\\', '\\\\')}" & vbCrLf
+logStream.WriteText Now & " [Runner] Read arg: " & arg & vbCrLf
+
+' Execute
+shell.Run """${daumStarterForScript.replaceAll('\\', '\\\\')}"" " & arg, 1, False
+
+If Err.Number <> 0 Then
+    logStream.WriteText Now & " [Runner] Error: " & Err.Description & vbCrLf
+End If
+
+logStream.SaveToFile "${debugLogPath.replaceAll('\\', '\\\\')}", 2
+logStream.Close
 `;
     try {
-        writeFileSync(runnerPs1Path, runnerScriptContent, { encoding: 'utf8' });
+        writeFileSync(runnerVbsPath, runnerScriptContent, { encoding: 'utf16le' });
     } catch (e: any) {
         logger.error(`Failed to create runner script: ${e.message}`);
         return false;
     }
 
-    // 2. Create bypass_proxy.bat
-    // Saves the argument (%1) to file and runs the task
-    // Note: %* captures all args, but protocol usually gives just one.
-    // Use > to overwrite the log file at the start of proxy execution.
-    // Use chcp 65001 to ensure UTF-8 encoding for Batch echo and redirected output.
+    // 2. Create proxy.vbs (Silent Proxy)
+    // Writes args to file and triggers Task
     const proxyScriptContent = `
-@echo off
-chcp 65001 > nul
-echo [%date% %time%] [Proxy] Received args: %* > "${debugLogPath}"
-echo %* > "${argsFilePath}"
-echo [%date% %time%] [Proxy] Triggering Task: ${TASK_NAME} >> "${debugLogPath}"
-schtasks /run /tn "${TASK_NAME}" >> "${debugLogPath}" 2>&1
+Set fso = CreateObject("Scripting.FileSystemObject")
+Set shell = CreateObject("WScript.Shell")
+
+' Capture args (Protocol URL)
+If WScript.Arguments.Count > 0 Then
+    arg = WScript.Arguments(0)
+Else
+    arg = ""
+End If
+
+' Write arg to file
+Set ts = fso.CreateTextFile("${argsFilePath.replaceAll('\\', '\\\\')}", True)
+ts.WriteLine arg
+ts.Close
+
+' Log & Trigger Task (Hidden)
+Set logStream = CreateObject("ADODB.Stream")
+logStream.Type = 2
+logStream.Charset = "utf-8"
+logStream.Open
+logStream.WriteText Now & " [Proxy] Received args: " & arg & vbCrLf
+logStream.WriteText Now & " [Proxy] Triggering Task: ${TASK_NAME}" & vbCrLf
+logStream.SaveToFile "${debugLogPath.replaceAll('\\', '\\\\')}", 2
+logStream.Close
+
+shell.Run "schtasks /run /tn ""${TASK_NAME}""", 0, False
 `;
     try {
-        writeFileSync(proxyBatPath, proxyScriptContent, { encoding: 'utf8' });
+        writeFileSync(proxyVbsPath, proxyScriptContent, { encoding: 'utf16le' });
     } catch (e: any) {
         logger.error(`Failed to create proxy script: ${e.message}`);
         return false;
@@ -159,40 +189,30 @@ schtasks /run /tn "${TASK_NAME}" >> "${debugLogPath}" 2>&1
         child.on('close', resolve);
     });
 
-    // 4. Create Scheduled Task (Admin)
-    // Runs runner.ps1 via PowerShell
-    const taskAction = `powershell -WindowStyle Hidden -ExecutionPolicy Bypass -File "${runnerPs1Path}"`;
-    // We create the task with /SC ONCE /ST 00:00 (dummy trigger) but /RL HIGHEST is key.
-    // Actually /SC ONCE requires a time. 00:00 might be in the past, effectively "on demand".
-    // Alternatively, just /SC MONTHLY. It doesn't matter much as we trigger it manually.
-    // Important: 'schtasks /create /tn ... /tr ... /sc ONCE /st 00:00 /rl HIGHEST /f'
+    // 4 & 5. Combined Elevation (Single UAC Prompt)
+    // - Create Scheduled Task pointing to runner.vbs
+    // - Update Registry to point to proxy.vbs
     
-    // NOTE: We use Start-Process to run schtasks as Admin
-    // Command: schtasks /create /tn "SkipDaumGameStarterUAC" /tr "..." /sc ONCE /st 00:00 /rl HIGHEST /f
-    // We need to escape quotes for the /tr argument carefully.
-    // The TR is: powershell ... -File "C:\...\runner.ps1"
+    // Command 1: schtasks /create
+    const schCommand = `schtasks /create /tn "${TASK_NAME}" /tr "wscript.exe '${runnerVbsPath}'" /sc ONCE /st 00:00 /rl HIGHEST /f`;
     
-    const schCommand = `schtasks /create /tn "${TASK_NAME}" /tr "powershell -WindowStyle Hidden -ExecutionPolicy Bypass -File '${runnerPs1Path}'" /sc ONCE /st 00:00 /rl HIGHEST /f`;
-    
-    logger.info('Creating Scheduled Task with Highest Level privileges...');
-    const taskResult = await runPowerShellAsAdmin(schCommand);
-    if (!taskResult) return false;
-
-    // 5. Update Registry to point to proxy bat
-    const newCmd = `"${proxyBatPath}" "%1"`;
-    // Escape for PowerShell script string
+    // Command 2: Registry Update
+    const newCmd = `wscript.exe "${proxyVbsPath}" "%1"`;
     const regPsScript = `Set-Item -Path "Registry::${PROTOCOL_KEY}" -Value '${newCmd}'`;
     
-    logger.info('Updating Registry to use Proxy Script...');
-    const regResult = await runPowerShellAsAdmin(regPsScript);
+    // Combined Script
+    const combinedScript = `${schCommand}\nif ($?) { ${regPsScript} } else { exit 1 }`;
+    
+    logger.info('Optimizing for silent execution... (Single UAC Prompt)');
+    const result = await runPowerShellAsAdmin(combinedScript);
 
-    if (regResult) {
-        logger.success('UAC Bypass (Scheduler Method) applied successfully.');
+    if (result) {
+        logger.success('Silent UAC Bypass applied successfully.');
     } else {
-        logger.error('Failed to update registry.');
+        logger.error('Failed to apply Silent UAC Bypass.');
     }
     
-    return regResult;
+    return result;
 }
 
 /**
@@ -219,30 +239,29 @@ export async function disableUACBypass(): Promise<boolean> {
         return false;
     }
 
-    if (backupCmd.includes('bypass_proxy.bat')) {
+    if (backupCmd.toLowerCase().includes('proxy.vbs')) {
         logger.warn('Backup seems modified. Skipping restore.');
         return false; 
     }
 
-    // 2. Restore Registry
-    const psScript = `Set-Item -Path "Registry::${PROTOCOL_KEY}" -Value '${backupCmd}'`;
-    logger.info('Restoring Registry...');
-    const regResult = await runPowerShellAsAdmin(psScript);
+    // 2 & 3. Combined Restoration (Single UAC Prompt)
+    const regRestoreScript = `Set-Item -Path "Registry::${PROTOCOL_KEY}" -Value '${backupCmd}'`;
+    const taskDeleteScript = `schtasks /delete /tn "${TASK_NAME}" /f`;
+    const combinedRestoreScript = `${regRestoreScript}\n${taskDeleteScript}`;
 
-    if (!regResult) {
-        logger.error('Failed to restore registry.');
+    logger.info('Restoring original configuration... (Single UAC Prompt)');
+    const result = await runPowerShellAsAdmin(combinedRestoreScript);
+
+    if (!result) {
+        logger.error('Failed to restore system configuration.');
         return false;
     }
-
-    // 3. Delete Scheduled Task
-    logger.info('Deleting Scheduled Task...');
-    await runPowerShellAsAdmin(`schtasks /delete /tn "${TASK_NAME}" /f`);
 
     // 4. Cleanup Files
     const binDir = getBinDirectory();
     const logsDir = getLogsDirectory();
     try {
-        const binFiles = ['bypass_proxy.bat', 'runner.ps1', 'launch_args.txt'];
+        const binFiles = ['proxy.vbs', 'runner.vbs', 'launch_args.txt'];
         binFiles.forEach(f => {
             const p = join(binDir, f);
             if (existsSync(p)) unlinkSync(p);

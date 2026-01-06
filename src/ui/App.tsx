@@ -156,6 +156,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
                 // Dynamic Import for UAC check to avoid blocking
                 const { isUACBypassEnabled: checkUac } = await import('../utils/uac.js');
                 const uac = await checkUac();
+                logger.info(`UAC Bypass: ${uac}`);
 
                 setIsAutoDetectEnabled(autoDetect);
                 setIsSilentModeEnabled(silent);
