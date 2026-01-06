@@ -311,7 +311,6 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
             await disableAutoDetectRegistry();
             await stopWatcherProcess();
             setIsAutoDetectEnabled(false);
-            setIsAutoDetectEnabled(false);
             logger.warn('오류 자동 감지 모드를 껐습니다.');
             return false;
         } else {
@@ -320,7 +319,6 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
                 await enableAutoDetectRegistry();
                 await restartWatcher(); // Use restart for clean start
                 setIsAutoDetectEnabled(true);
-                 setIsAutoDetectEnabled(true);
                 logger.success(`오류 자동 감지 모드를 켰습니다. ( ${process.execPath} --watch )`);
                 return true;
             } catch (e) {
@@ -370,7 +368,6 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
         if (previousScreen) {
             setScreen(previousScreen);
             setPreviousScreen(null);
-            // We set lastGameStatus to true naturally by the next poll, or we can force it here to prevent immediate re-trigger if logic was synchronous
             setLastGameStatus(true); 
         } else {
             setScreen('MAIN_MENU'); // Fallback

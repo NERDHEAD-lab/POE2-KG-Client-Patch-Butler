@@ -60,6 +60,24 @@ export const getAppDataDirectory = (): string => {
     return APP_DATA_ROOT;
 };
 
+// Returns the binary directory (.../bin)
+export const getBinDirectory = (): string => {
+    const binDir = path.join(APP_DATA_ROOT, 'bin');
+    if (!fs.existsSync(binDir)) {
+        try { fs.mkdirSync(binDir, { recursive: true }); } catch (e) { console.error(e); }
+    }
+    return binDir;
+};
+
+// Returns the logs directory (.../logs)
+export const getLogsDirectory = (): string => {
+    const logsDir = path.join(APP_DATA_ROOT, 'logs');
+    if (!fs.existsSync(logsDir)) {
+        try { fs.mkdirSync(logsDir, { recursive: true }); } catch (e) { console.error(e); }
+    }
+    return logsDir;
+};
+
 export const getLastInstallPath = (): string | undefined => {
     return config.get('lastInstallPath') as string | undefined;
 };

@@ -1,7 +1,7 @@
 import EventEmitter from 'events';
 import fs from 'fs';
 import path from 'path';
-import { getAppDataDirectory } from './config.js';
+import { getLogsDirectory } from './config.js';
 
 // --- Logger Constants ---
 const LOG_RETENTION_DAYS = 31;
@@ -22,8 +22,7 @@ export class Logger extends EventEmitter {
     constructor(suffix: string = 'application') {
         super();
         this.suffix = suffix;
-        this.logDir = path.join(getAppDataDirectory(), 'logs');
-        this.ensureLogDir();
+        this.logDir = getLogsDirectory();
         this.rotateLogs();
     }
 
@@ -32,16 +31,6 @@ export class Logger extends EventEmitter {
         this.rotateLogs(); // Rotate logs for the new suffix to ensure cleanup
     }
 
-    private ensureLogDir() {
-        if (!fs.existsSync(this.logDir)) {
-            try {
-                fs.mkdirSync(this.logDir, { recursive: true });
-            } catch (e) {
-                // Cannot log error if logging fails, silently fail or use console
-                console.error('Failed to create log directory:', e);
-            }
-        }
-    }
 
     private getLogFileName(): string {
         const now = new Date();
@@ -96,7 +85,6 @@ export class Logger extends EventEmitter {
 
     private writeToFile(message: string, type: LogType) {
         try {
-            this.ensureLogDir();
             const logFile = path.join(this.logDir, this.getLogFileName());
 
             // Check size before writing

@@ -8,7 +8,7 @@ import path from 'path';
 import Tray from './utils/tray.js';
 import { ICON_BASE64 } from './generated/iconBase64.js';
 import { TRAY_APP_BASE64 } from './generated/trayAppBase64.js';
-import { getAppDataDirectory, getSilentModeEnabled } from './utils/config.js';
+import { getSilentModeEnabled, getBinDirectory } from './utils/config.js';
 import { logger } from './utils/logger.js';
 
 // Keep tray in global scope to prevent garbage collection
@@ -25,12 +25,7 @@ const openOrFocusApp = () => {
 
 const setupTray = async () => {
     try {
-        const appDataDir = getAppDataDirectory();
-        const binDir = path.join(appDataDir, 'bin');
-
-        if (!fs.existsSync(binDir)) {
-            fs.mkdirSync(binDir, { recursive: true });
-        }
+        const binDir = getBinDirectory();
 
         const iconPath = path.join(binDir, 'icon.ico');
         const trayAppPath = path.join(binDir, 'trayicon.exe');
