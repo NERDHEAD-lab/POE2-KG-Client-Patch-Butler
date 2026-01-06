@@ -52,6 +52,7 @@
 │   │   ├── registry.ts     # Windows 레지스트리 제어
 │   │   ├── restore.ts      # 백업 및 복구 로직
 │   │   ├── server.ts       # 익스텐션 통신 서버
+│   │   ├── uac.ts          # UAC 우회 로직 (Registry Injection)
 │   │   └── ...             # 기타 유틸리티 (updater, cleaner, text 등)
 └── tsconfig.json       # TypeScript 설정
 ```
@@ -97,6 +98,7 @@ Node.js 및 TypeScript 표준 컨벤션을 따릅니다.
 | **Q**      | Global    | 프로그램 종료              |
 | **F**      | Init      | **무시하고 진행 (Ignore)** |
 | **1~3, 0** | MainMenu  | 메뉴 선택                  |
+| **\***     | Sidebar   | UAC 팝업 제거 (BETA)       |
 
 ## 4. Glossary & Terminology
 

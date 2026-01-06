@@ -52,6 +52,15 @@ const Sidebar: React.FC<SidebarProps> = ({ items, isActive }) => {
         }))
     );
 
+    // Sync itemStates with items whenever items prop changes (reactivity fix)
+    useEffect(() => {
+        setItemStates(items.map(i => ({
+            description: i.description,
+            status: i.initialStatus || null,
+            visible: i.initialVisible ?? true
+        })));
+    }, [items]);
+
     // Initializer
     useEffect(() => {
         const cleanups: (() => void)[] = [];

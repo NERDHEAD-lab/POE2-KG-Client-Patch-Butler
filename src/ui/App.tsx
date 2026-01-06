@@ -110,6 +110,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
     const [isSilentModeEnabled, setIsSilentModeEnabled] = useState(false);
     const [isAutoLaunchGameEnabled, setIsAutoLaunchGameEnabled] = useState(false);
     const [isBackupModeEnabled, setIsBackupModeEnabled] = useState(false);
+    const [isUacBypassEnabled, setIsUacBypassEnabled] = useState(false);
 
     // Title Version State
     const [titleVersion, setTitleVersion] = useState<string>(() => {
@@ -152,10 +153,15 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
                 const autoLaunch = getAutoLaunchGameEnabled();
                 const backup = getBackupEnabled();
 
+                // Dynamic Import for UAC check to avoid blocking
+                const { isUACBypassEnabled: checkUac } = await import('../utils/uac.js');
+                const uac = await checkUac();
+
                 setIsAutoDetectEnabled(autoDetect);
                 setIsSilentModeEnabled(silent);
                 setIsAutoLaunchGameEnabled(autoLaunch);
                 setIsBackupModeEnabled(backup);
+                setIsUacBypassEnabled(uac);
 
                 if (autoDetect) {
                     logger.info(`오류 자동 감지 설정이 켜져 있습니다. 감시 프로세스를 시작합니다.\n( 실행 경로: ${process.execPath} --watch )`);
@@ -601,9 +607,25 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
         {
             keyChar: '*',
             description: 'Daumgamestarter 팝업제거 패치 (BETA):',
-            initialStatus: <Text color="green">ON</Text>,
-            onClick: () => {
-                
+            initialStatus: isUacBypassEnabled ? <Text color="green">ON</Text> : <Text color="red">OFF</Text>,
+            onClick: (ctx: any) => {
+                (async () => {
+                    const { enableUACBypass, disableUACBypass } = await import('../utils/uac.js');
+                    
+                    if (isUacBypassEnabled) {
+                        const success = await disableUACBypass();
+                        if (success) {
+                            setIsUacBypassEnabled(false);
+                            ctx.setStatus(<Text color="red">OFF</Text>);
+                        }
+                    } else {
+                        const success = await enableUACBypass();
+                        if (success) {
+                            setIsUacBypassEnabled(true);
+                            ctx.setStatus(<Text color="green">ON</Text>);
+                        }
+                    }
+                })();
             }
         },
         {
@@ -658,7 +680,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
             initialStatus: updateInfo ? <Text color="green">업데이트 ({appVersion} {'->'} {updateInfo.version})</Text> : null,
             onClick: () => handleUpdate()
         }
-    ], [isAutoDetectEnabled, isSilentModeEnabled, isAutoLaunchGameEnabled, isBackupModeEnabled, installPath, serverPort, appVersion, titleVersion, maxSeenTitleVersion]);
+    ], [isAutoDetectEnabled, isSilentModeEnabled, isAutoLaunchGameEnabled, isBackupModeEnabled, isUacBypassEnabled, installPath, serverPort, appVersion, titleVersion, maxSeenTitleVersion]);
 
     // Calculate Dynamic Sidebar Width
     const sidebarWidth = React.useMemo(() => {
@@ -756,7 +778,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
 
                 {/* Sidebar (Right) */}
                 <Sidebar
-                    key={`${installPath}-${isAutoDetectEnabled}-${isSilentModeEnabled}-${isAutoLaunchGameEnabled}-${isBackupModeEnabled}-${isExtensionConnected}-${titleVersion}-${maxSeenTitleVersion}`} // Force remount on foundational state changes
+                    key={`${installPath}-${isAutoDetectEnabled}-${isSilentModeEnabled}-${isAutoLaunchGameEnabled}-${isBackupModeEnabled}-${isUacBypassEnabled}-${isExtensionConnected}-${titleVersion}-${maxSeenTitleVersion}`} // Force remount on foundational state changes
                     isActive={isInputActive}
                     items={sidebarItems} />
             </Box>
