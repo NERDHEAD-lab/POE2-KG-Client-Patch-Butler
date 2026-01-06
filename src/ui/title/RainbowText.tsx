@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Text } from 'ink';
+import { TitleProps } from './types.js';
 
 const COLORS = [
     '#FF0000', '#FF3300', '#FF6600', '#FF9900', '#FFCC00', // Red to Yellow
@@ -10,12 +11,7 @@ const COLORS = [
     '#FF00FF', '#FF00CC', '#FF0099', '#FF0066', '#FF0033'  // Magenta to Red
 ];
 
-interface RainbowTextProps {
-    children: React.ReactNode;
-    interval?: number;
-}
-
-const RainbowText: React.FC<RainbowTextProps> = ({ children, interval = 200 }) => {
+const RainbowText: React.FC<TitleProps> = ({ children, interval = 200 }) => {
     const [colorIndex, setColorIndex] = useState(0);
 
     useEffect(() => {

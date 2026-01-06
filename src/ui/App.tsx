@@ -11,8 +11,10 @@ import CaseGameRunning from './Menu/CaseGameRunning.js';
 import { isProcessRunning } from '../utils/process.js';
 import Sidebar, { SidebarItemConfig } from './Sidebar.js';
 import OutputBox from './OutputBox.js';
-import RainbowWaveText from './RainbowWaveText.js';
-import RainbowText from './RainbowText.js';
+import RainbowWaveText from './title/RainbowWaveText.js';
+import RainbowText from './title/RainbowText.js';
+import SimpleText from './title/SimpleText.js';
+import { TitleProps } from './title/types.js';
 import { getAppVersion } from '../utils/version.js';
 import { checkForUpdate } from '../utils/updater.js';
 import { performSelfUpdate } from '../utils/selfUpdate.js';
@@ -34,32 +36,34 @@ interface AppProps {
 
 interface TitleDef {
     version: string;
-    type: 'simple' | 'rainbow' | 'wave';
-    color?: string;
+    component: React.ComponentType<TitleProps>;
+    props: Omit<TitleProps, 'children'>; // Props to bind (color, interval, etc)
     textTemplate: string;
 }
 
 const TITLE_DEFINITIONS: TitleDef[] = [
     {
         version: 'v1.0.0',
-        type: 'simple',
-        color: '#FFFF66', // Light Yellow
+        component: SimpleText,
+        props: { color: '#FFFF66' }, // Light Yellow
         textTemplate: 'POE2 KG Client Patch Butler v{version}'
     },
     {
         version: 'v1.1.0',
-        type: 'simple',
-        color: '#FFA500', // Orange
+        component: SimpleText,
+        props: { color: '#FFA500' }, // Orange
         textTemplate: 'POE2 카카오게임즈 클라이언트 오류 해결 마법사 v{version}'
     },
     {
         version: 'v1.4.0',
-        type: 'rainbow',
+        component: RainbowText,
+        props: { interval: 200 },
         textTemplate: 'POE2 카카오게임즈 클라이언트 오류 해결 마법사 v{version}'
     },
     {
         version: 'v1.5.0',
-        type: 'wave',
+        component: RainbowWaveText,
+        props: { interval: 50 },
         textTemplate: 'POE2 카카오게임즈 클라이언트 오류 해결 마법사 v{version}'
     }
 ];
@@ -660,26 +664,13 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
                 {(() => {
                     const currentDef = TITLE_DEFINITIONS.find(d => d.version === titleVersion) || TITLE_DEFINITIONS[TITLE_DEFINITIONS.length - 1];
                     const titleText = currentDef.textTemplate.replace('{version}', appVersion);
+                    const Component = currentDef.component;
 
-                    if (currentDef.type === 'wave') {
-                        return (
-                            <RainbowWaveText interval={50}>
-                                {titleText}
-                            </RainbowWaveText>
-                        );
-                    } else if (currentDef.type === 'rainbow') {
-                        return (
-                            <RainbowText interval={200}>
-                                {titleText}
-                            </RainbowText>
-                        );
-                    } else {
-                        return (
-                            <Text color={currentDef.color || 'white'}>
-                                {titleText}
-                            </Text>
-                        );
-                    }
+                    return (
+                        <Component {...currentDef.props}>
+                            {titleText}
+                        </Component>
+                    );
                 })()}
             </Box>
 
