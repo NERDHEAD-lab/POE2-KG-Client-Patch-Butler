@@ -39,10 +39,20 @@
 ├── src/                # 소스 코드
 │   ├── ui/             # React (Ink) 컴포넌트
 │   │   ├── Menu/       # 메뉴 관련 컴포넌트
-│   │   └── ...
-│   ├── utils/          # 유틸리티 함수 (레지스트리, 파일 제어 등)
+│   │   ├── title/      # 타이틀 버전별 렌더링 컴포넌트
+│   │   ├── Sidebar.tsx # 사이드바 및 상태 표시
+│   │   └── ...         # 기타 UI (OutputBox, ProgressBar 등)
 │   ├── cli.tsx         # 진입점 (CLI 초기화)
-│   └── watcher.ts      # 상태 감시 로직
+│   ├── watcher.ts      # 상태 감시 로직
+│   ├── utils/          # 유틸리티 함수
+│   │   ├── autoDetect.ts   # 프로세스 감시 및 자동화 로직
+│   │   ├── config.ts       # 설정 관리 (store)
+│   │   ├── downloader.ts   # 파일 다운로드
+│   │   ├── logger.ts       # 로깅 시스템
+│   │   ├── registry.ts     # Windows 레지스트리 제어
+│   │   ├── restore.ts      # 백업 및 복구 로직
+│   │   ├── server.ts       # 익스텐션 통신 서버
+│   │   └── ...             # 기타 유틸리티 (updater, cleaner, text 등)
 └── tsconfig.json       # TypeScript 설정
 ```
 
@@ -81,7 +91,9 @@ Node.js 및 TypeScript 표준 컨벤션을 따릅니다.
 | **H**      | Sidebar   | 자주 묻는 질문 (FAQ)       |
 | **/**      | Sidebar   | 후원하기                   |
 | **Enter**  | Init/Menu | 선택 및 확인               |
+| **C**      | Sidebar   | 설치 경로 수정             |
 | **E**      | Init      | 경로 수정                  |
+| **T**      | Sidebar   | 타이틀 버전 변경           |
 | **Q**      | Global    | 프로그램 종료              |
 | **F**      | Init      | **무시하고 진행 (Ignore)** |
 | **1~3, 0** | MainMenu  | 메뉴 선택                  |
