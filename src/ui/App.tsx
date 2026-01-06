@@ -8,7 +8,7 @@ import CaseExecuteFailed from './Menu/CaseExecuteFailed.js';
 import CaseCrashing from './Menu/CaseCrashing.js';
 import CaseReportIssue from './Menu/CaseReportIssue.js';
 import CaseGameRunning from './Menu/CaseGameRunning.js';
-import { isProcessRunning } from '../utils/process.js';
+import { isProcessRunning, setConsoleSize } from '../utils/process.js';
 import Sidebar, { SidebarItemConfig } from './Sidebar.js';
 import OutputBox from './OutputBox.js';
 import RainbowWaveText from './title/RainbowWaveText.js';
@@ -560,7 +560,8 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
         },
         {
             keyChar: 'T',
-            description: `타이틀 버전 : ${titleVersion}`,
+            description: `타이틀 버전:`,
+            initialStatus: <Text color="green">{titleVersion}</Text>,
             // isChild: false, // Explicitly false or undefined (parent)
             initialVisible: true,
             onClick: (ctx: any) => {
@@ -582,8 +583,6 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
             }
         },
         {
-            // Conditional Child Item for New Version Alert
-            keyChar: undefined,
             description: '',
             isChild: true,
             initialVisible: (() => {
@@ -600,6 +599,14 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
             onClick: () => {
                 setForceInitEdit(true);
                 setScreen('INIT');
+            }
+        },
+        {
+            keyChar: '*',
+            description: 'Daumgamestarter 팝업제거 패치 (BETA):',
+            initialStatus: <Text color="green">ON</Text>,
+            onClick: () => {
+                
             }
         },
         {
@@ -656,6 +663,65 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
         }
     ], [isAutoDetectEnabled, isSilentModeEnabled, isAutoLaunchGameEnabled, isBackupModeEnabled, installPath, serverPort, appVersion, titleVersion, maxSeenTitleVersion]);
 
+    // Calculate Dynamic Sidebar Width
+    const sidebarWidth = React.useMemo(() => {
+        const { getStringWidth } = require('../utils/text.js');
+        const baseMin = 34; // Minimum width equivalent to old fixed width
+        let max = baseMin;
+
+        sidebarItems.forEach(item => {
+            if (item.type === 'separator') return;
+            
+            // Layout: " [X] " (or " ㄴ ") + Description + Status
+            // Key part: 6 chars
+            let itemW = 6; 
+            if (item.description) {
+                itemW += getStringWidth(item.description);
+            }
+            
+            // Status buffer: precise check
+            if (item.initialStatus) {
+                 // Fallback heuristic
+                 itemW += 10; 
+            }
+
+            if (itemW > max) {
+                max = itemW;
+            }
+        });
+        
+        // Add Extra padding for border/safety if needed
+        return max + 2;
+    }, [sidebarItems]);
+
+    // Initial Layout Resize (Golden Ratio Width + Adaptive Height)
+    const hasResized = React.useRef(false);
+    useEffect(() => {
+        if (!hasResized.current && sidebarWidth > 30) { 
+            const visualSidebarWidth = sidebarWidth + 4; // Account for border/padding (+4 safety)
+            const targetCols = Math.ceil(visualSidebarWidth * 2.618); // Golden Ratio Reference for Width
+
+            // Height logic: Adaptive to content
+            // We count the actual visible items in the sidebar to determine necessary height.
+            const visibleItemsCount = sidebarItems.filter(item => item.initialVisible !== false).length;
+            
+            // Total Rows Calculation (Detailed Breakdown):
+            // 1. Root Padding Top: 1
+            // 2. Header (Title + Margin): 2
+            // 3. Sidebar Borders (Top + Bottom): 2
+            // 4. OutputBox (MarginTop 1 + Borders 2 + Content 1): 4
+            // 5. Footer (2 lines): 2
+            // 6. Root Padding Bottom: 1
+            // Constant Overhead = 12 lines
+            
+            // Target Height = Visible Items + Constant Overhead (12) + User Requested Padding (2)
+            const targetRows = visibleItemsCount + 14;
+            
+            setConsoleSize(targetCols, targetRows);
+            hasResized.current = true;
+        }
+    }, [sidebarWidth, sidebarItems]);
+
     return (
         <Box flexDirection="column" padding={1} minHeight={dimensions.rows} width={dimensions.columns}>
             {/* Header */}
@@ -677,7 +743,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
             {/* Main Layout: Row [Content | Sidebar] */}
             <Box flexDirection="row" flexGrow={1} alignItems="stretch">
                 {/* Main Content Info */}
-                <Box flexDirection="column" width={Math.max(0, dimensions.columns - 34)}>
+                <Box flexDirection="column" width={Math.max(0, dimensions.columns - sidebarWidth)}>
                     {serverNotice && (
                         <Box flexDirection="column" marginBottom={1}>
                             <Box borderStyle="single" borderColor="white" paddingX={1} marginTop={0} flexDirection="column">

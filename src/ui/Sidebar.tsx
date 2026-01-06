@@ -39,27 +39,7 @@ interface ItemState {
     visible: boolean;
 }
 
-const getStringWidth = (str: string) => {
-    let width = 0;
-    for (let i = 0; i < str.length; i++) {
-        const charCode = str.codePointAt(i);
-        if (charCode === undefined) continue;
-        
-        // Basic range check for CJK (Korean, Chinese, Japanese)
-        // This is a heuristic: most CJK chars are wide (2 columns)
-        if (
-            (charCode >= 0x1100 && charCode <= 0x11FF) || // Hangul Jamo
-            (charCode >= 0x3130 && charCode <= 0x318F) || // Hangul Compatibility Jamo
-            (charCode >= 0xAC00 && charCode <= 0xD7A3) || // Hangul Syllables
-            (charCode >= 0x4E00 && charCode <= 0x9FFF)    // CJK Unified Ideographs
-        ) {
-            width += 2;
-        } else {
-            width += 1;
-        }
-    }
-    return width;
-};
+import { getStringWidth } from '../utils/text.js';
 
 const Sidebar: React.FC<SidebarProps> = ({ items, isActive }) => {
     // We strictly assume 'items' config array is static or at least stable in length/order for this simple implementation.
@@ -168,12 +148,8 @@ const Sidebar: React.FC<SidebarProps> = ({ items, isActive }) => {
             let itemW = 6; // Key part "[A] "
             itemW += getStringWidth(state.description || '');
 
-            // Estimate status width. Since status is ReactNode, we can't easily know its text width.
-            // We'll assume a safe buffer or try to check if it's string.
-            // For now, let's assume status takes ~4-8 chars if present.
-            // A better way is to pass width hints, but heuristic is okay for TUI.
             if (state.status) {
-                itemW += 10; // Buffer for status " ON", " OFF", " (v1.2)"
+                itemW += 10; 
             }
 
             if (itemW > max) {
