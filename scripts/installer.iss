@@ -64,6 +64,7 @@ Name: "{userappdata}\Microsoft\Internet Explorer\Quick Launch\{#MyAppName}"; Fil
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 
 [UninstallRun]
+Filename: "{app}\{#MyAppExeName}"; Parameters: "--restore-uac"; Flags: runhidden waituntilterminated; RunOnceId: "RestoreUAC"
 Filename: "{sys}\taskkill.exe"; Parameters: "/F /IM {#MyAppExeName} /T"; Flags: runhidden; RunOnceId: "KillProcess"
 Filename: "{sys}\reg.exe"; Parameters: "delete ""HKCU\Software\Microsoft\Windows\CurrentVersion\Run"" /v ""POE2_Patch_Butler_Watch"" /f"; Flags: runhidden; RunOnceId: "DelRegKey"
 
