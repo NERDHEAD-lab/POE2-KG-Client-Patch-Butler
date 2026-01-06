@@ -24,6 +24,12 @@ const config = new ConfClass({
         isBackupEnabled: {
             type: 'boolean',
             default: false
+        },
+        titleVersion: {
+            type: 'string'
+        },
+        maxSeenTitleVersion: {
+            type: 'string'
         }
     },
 });
@@ -96,5 +102,21 @@ export const getAutoLaunchGameEnabled = (): boolean => {
 
 export const setAutoLaunchGameEnabled = (enabled: boolean): void => {
     config.set('AutoLaunchGame', enabled);
+};
+
+export const _setTitleVersion = (version: string): void => {
+    config.set('titleVersion', version);
+};
+
+export const _getTitleVersion = (): string | undefined => {
+    return config.get('titleVersion') as string | undefined;
+};
+
+export const _setMaxSeenTitleVersion = (version: string): void => {
+    config.set('maxSeenTitleVersion', version);
+};
+
+export const _getMaxSeenTitleVersion = (): string | undefined => {
+    return config.get('maxSeenTitleVersion') as string | undefined;
 };
 

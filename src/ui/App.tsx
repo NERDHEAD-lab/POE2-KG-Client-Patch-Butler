@@ -11,6 +11,7 @@ import CaseGameRunning from './Menu/CaseGameRunning.js';
 import { isProcessRunning } from '../utils/process.js';
 import Sidebar, { SidebarItemConfig } from './Sidebar.js';
 import OutputBox from './OutputBox.js';
+import RainbowWaveText from './RainbowWaveText.js';
 import RainbowText from './RainbowText.js';
 import { getAppVersion } from '../utils/version.js';
 import { checkForUpdate } from '../utils/updater.js';
@@ -21,7 +22,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { logger } from '../utils/logger.js';
 import { onExtensionEnableAutoLaunch } from '../utils/server.js';
-import { getAutoLaunchGameEnabled, setAutoLaunchGameEnabled, getSilentModeEnabled, getBackupEnabled, setBackupEnabled } from '../utils/config.js';
+import { getAutoLaunchGameEnabled, setAutoLaunchGameEnabled, getSilentModeEnabled, getBackupEnabled, setBackupEnabled, _getTitleVersion, _setTitleVersion, _getMaxSeenTitleVersion, _setMaxSeenTitleVersion } from '../utils/config.js';
 import { isAutoDetectRegistryEnabled, restartWatcher, stopWatcherProcess, enableAutoDetectRegistry, disableAutoDetectRegistry } from '../utils/autoDetect.js';
 
 type Screen = 'INIT' | 'MAIN_MENU' | 'CASE_1' | 'CASE_2' | 'CASE_3' | 'CASE_0' | 'GAME_WARNING';
@@ -30,6 +31,38 @@ interface AppProps {
     initialMode?: 'NORMAL' | 'FIX_PATCH';
     serverPort?: number;
 }
+
+interface TitleDef {
+    version: string;
+    type: 'simple' | 'rainbow' | 'wave';
+    color?: string;
+    textTemplate: string;
+}
+
+const TITLE_DEFINITIONS: TitleDef[] = [
+    {
+        version: 'v1.0.0',
+        type: 'simple',
+        color: '#FFFF66', // Light Yellow
+        textTemplate: 'POE2 KG Client Patch Butler v{version}'
+    },
+    {
+        version: 'v1.1.0',
+        type: 'simple',
+        color: '#FFA500', // Orange
+        textTemplate: 'POE2 카카오게임즈 클라이언트 오류 해결 마법사 v{version}'
+    },
+    {
+        version: 'v1.4.0',
+        type: 'rainbow',
+        textTemplate: 'POE2 카카오게임즈 클라이언트 오류 해결 마법사 v{version}'
+    },
+    {
+        version: 'v1.5.0',
+        type: 'wave',
+        textTemplate: 'POE2 카카오게임즈 클라이언트 오류 해결 마법사 v{version}'
+    }
+];
 
 const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => {
     const { exit } = useApp();
@@ -73,6 +106,16 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
     const [isSilentModeEnabled, setIsSilentModeEnabled] = useState(false);
     const [isAutoLaunchGameEnabled, setIsAutoLaunchGameEnabled] = useState(false);
     const [isBackupModeEnabled, setIsBackupModeEnabled] = useState(false);
+
+    // Title Version State
+    const [titleVersion, setTitleVersion] = useState<string>(() => {
+        const saved = _getTitleVersion();
+        return saved || TITLE_DEFINITIONS[TITLE_DEFINITIONS.length - 1].version;
+    });
+    const [maxSeenTitleVersion, setMaxSeenTitleVersion] = useState<string>(() => {
+        const saved = _getMaxSeenTitleVersion();
+        return saved || TITLE_DEFINITIONS[TITLE_DEFINITIONS.length - 1].version;
+    });
 
     useEffect(() => {
         // Listen for enabled signal
@@ -512,6 +555,42 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
             type: 'separator'
         },
         {
+            keyChar: 'T',
+            description: `타이틀 버전 : ${titleVersion}`,
+            // isChild: false, // Explicitly false or undefined (parent)
+            initialVisible: true,
+            onClick: (ctx: any) => {
+                const currentIndex = TITLE_DEFINITIONS.findIndex(d => d.version === titleVersion);
+                const nextIndex = (currentIndex + 1) % TITLE_DEFINITIONS.length;
+                const nextVersion = TITLE_DEFINITIONS[nextIndex].version;
+
+                setTitleVersion(nextVersion);
+                _setTitleVersion(nextVersion);
+                
+                // Update Max Seen if needed
+                const currentMaxSeenIndex = TITLE_DEFINITIONS.findIndex(d => d.version === maxSeenTitleVersion);
+                // If we select a version that is "newer" (higher index) than what we've seen, update max seen.
+                // Note: The user logic implies if we check v1.6.0, we saw it.
+                if (nextIndex > currentMaxSeenIndex) {
+                    setMaxSeenTitleVersion(nextVersion);
+                    _setMaxSeenTitleVersion(nextVersion);
+                }
+            }
+        },
+        {
+            // Conditional Child Item for New Version Alert
+            keyChar: undefined,
+            description: '',
+            isChild: true,
+            initialVisible: (() => {
+                const latestDef = TITLE_DEFINITIONS[TITLE_DEFINITIONS.length - 1];
+                const maxSeenIndex = TITLE_DEFINITIONS.findIndex(d => d.version === maxSeenTitleVersion);
+                const latestIndex = TITLE_DEFINITIONS.findIndex(d => d.version === latestDef.version);
+                return latestIndex > maxSeenIndex;
+            })(),
+            initialStatus: <Text color="green">New version available!</Text>
+        },
+        {
             keyChar: 'C',
             description: '설치 경로 수정',
             onClick: () => {
@@ -571,24 +650,43 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
             initialStatus: updateInfo ? <Text color="green">업데이트 ({appVersion} {'->'} {updateInfo.version})</Text> : null,
             onClick: () => handleUpdate()
         }
-    ], [isAutoDetectEnabled, isSilentModeEnabled, isAutoLaunchGameEnabled, isBackupModeEnabled, installPath, serverPort, appVersion]);
+    ], [isAutoDetectEnabled, isSilentModeEnabled, isAutoLaunchGameEnabled, isBackupModeEnabled, installPath, serverPort, appVersion, titleVersion, maxSeenTitleVersion]);
 
     return (
         <Box flexDirection="column" padding={1} minHeight={dimensions.rows} width={dimensions.columns}>
             {/* Header */}
             <Box flexDirection="column" marginBottom={1}>
-                {/* Rainbow Title */}
-                <RainbowText>POE2 카카오게임즈 클라이언트 오류 해결 마법사 v{appVersion}</RainbowText>
+                {/* Dynamic Title Rendering */}
+                {(() => {
+                    const currentDef = TITLE_DEFINITIONS.find(d => d.version === titleVersion) || TITLE_DEFINITIONS[TITLE_DEFINITIONS.length - 1];
+                    const titleText = currentDef.textTemplate.replace('{version}', appVersion);
 
-                {/* Server Notice */}
-
+                    if (currentDef.type === 'wave') {
+                        return (
+                            <RainbowWaveText interval={50}>
+                                {titleText}
+                            </RainbowWaveText>
+                        );
+                    } else if (currentDef.type === 'rainbow') {
+                        return (
+                            <RainbowText interval={200}>
+                                {titleText}
+                            </RainbowText>
+                        );
+                    } else {
+                        return (
+                            <Text color={currentDef.color || 'white'}>
+                                {titleText}
+                            </Text>
+                        );
+                    }
+                })()}
             </Box>
 
             {/* Main Layout: Row [Content | Sidebar] */}
             <Box flexDirection="row" flexGrow={1} alignItems="stretch">
                 {/* Main Content Info */}
                 <Box flexDirection="column" width={Math.max(0, dimensions.columns - 34)}>
-                    {/* Server Notice moved here */}
                     {serverNotice && (
                         <Box flexDirection="column" marginBottom={1}>
                             <Box borderStyle="single" borderColor="white" paddingX={1} marginTop={0} flexDirection="column">
@@ -604,7 +702,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
 
                 {/* Sidebar (Right) */}
                 <Sidebar
-                    key={`${installPath}-${isAutoDetectEnabled}-${isSilentModeEnabled}-${isAutoLaunchGameEnabled}-${isBackupModeEnabled}-${isExtensionConnected}`} // Force remount on foundational state changes
+                    key={`${installPath}-${isAutoDetectEnabled}-${isSilentModeEnabled}-${isAutoLaunchGameEnabled}-${isBackupModeEnabled}-${isExtensionConnected}-${titleVersion}-${maxSeenTitleVersion}`} // Force remount on foundational state changes
                     isActive={isInputActive}
                     items={sidebarItems} />
             </Box>
