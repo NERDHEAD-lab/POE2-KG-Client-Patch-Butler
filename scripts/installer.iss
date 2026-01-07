@@ -42,6 +42,7 @@ SetupIconFile=..\assets\icon.ico
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
+UninstallDisplayIcon={app}\{#MyAppExeName}
 
 [Languages]
 Name: "korean"; MessagesFile: "Korean.isl"
