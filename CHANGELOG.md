@@ -1,5 +1,38 @@
 # Changelog
 
+## [1.5.0](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/compare/1.4.0...1.5.0) (2026-01-07)
+
+
+### Features
+
+* Daumgamestarter 팝업제거 패치 (BETA) 기능 추가 ([bbba5d3](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/bbba5d3ce1f2aacaaf2f948e1cbb45931f716dff))
+* Daumgamestarter 팝업제거 패치 (BETA) 기능 추가 - 2 ([75dd721](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/75dd721d29978c5a34da5a56af4de32c16c28fa0))
+* output에 출력되는 로그를 사용자 친화적이게 개선 ([8f1114f](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/8f1114f211676e2d6794651c88926883657a2f15))
+* output에 출력되는 로그를 사용자 친화적이게 개선 - 2 ([7c1008f](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/7c1008f8a958e9a864cac33d40a5c407de990c8f))
+* POE2 실행 감시 기능 고도화 및 경고 UI 개선 ([d01c7f7](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/d01c7f7245bf2afece80184e0577cdc2babf96f4))
+* POE2 실행 감시 기능 고도화 및 경고 UI 개선 - 2 ([bdb822e](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/bdb822e3c1eaf1721f9733a914d2d5aa1bc072e4))
+* UI 개선 ([9ec8651](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/9ec8651a75cfade8c9c97ec6bc1bd2b4151a85b6))
+* 게임 실행 상태 확인을 위한 스플래시 스크린 추가 ([2de6e09](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/2de6e092c1a02b4c78947b401b9a95624e21fb0d))
+* 게임 실행 상태 확인을 위한 스플래시 스크린 추가 - 2 ([ad49c63](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/ad49c635e20d2faed18e1c3d93d2c05377752ebd))
+* 경로 설정 화면 UX 개선 ([02827a3](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/02827a3ef3dce5c1c2a41e47078730fa386372d4))
+* 불필요한 output UI의 출력 유지시간 기능 제거 ([944f94f](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/944f94fd67a3581a0850d41cf7094306ec94d8dc))
+* 빠른 도구 UI/UX 개선 ([320bf85](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/320bf85dfe1a70d5d5bbc30a5e6900d2d4bf20b2))
+* 오류 수정 후 자동으로 게임을 시작하는 기능 추가 - 2 ([3847916](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/38479162fb56b38bc9b9b670acfce6df4a595297))
+* 오류 수정 후 자동으로 게임을 시작하는 기능 추가 - 3 ([52ba4c2](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/52ba4c21dd51fdbaafc62fba19276bfd84061ad2))
+* 오류 수정 후 자동으로 게임을 시작하는 기능 추가 ( POE & POE2 빠른 실행 (Kakao) 확장 플러그인 연동 ) ([1d53474](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/1d534745f69e6a1dfccf81e046136888a0fc3d89))
+* 제거 시 Daumgamestarter 팝업제거 패치 (BETA) 원복절차 추가 ([16a4e15](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/16a4e1566d191f40025b6e07a8bf8cdfcb667f98))
+* 타이틀을 더 화려하게!!!!!! ([c818895](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/c818895dfd1fa26af3fa73c33967b98c06ff645d))
+* 툴 제거 기능 개선 (각종 설정 비활성화 후 제거) ([727219b](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/727219b3ce8c3f4b9623b37f701ef95523c244ee))
+* 툴 제거 기능 개선 (각종 설정 비활성화 후 제거) - 2 ([b78a425](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/b78a425eb7da7a4374fb7da839672efc136204af))
+
+
+### Bug Fixes
+
+* 업데이트 확인을 의도하지 않은 상황에서 잦은 빈도로 확인 하던 문제를 수정 ([9c6b722](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/9c6b722925a3492482072550bc846a74c0f3bd4a))
+* 오류 자동 감지 모드 실행 시 감시 루프가 중첩될 수 있는 잠재적 문제 해결 ([940756b](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/940756bdf9d895b4a141cb23df233c2b21e66c26))
+* 오류 자동 감지 모드가 불필요한 프로세스(conhost.exe)를 누적시키는 문제 수정 ([4fa0cac](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/4fa0cac7fbe5d0763048b93a38174c1a90fa497b))
+* 프로그램 추가제거에서 툴 아이콘이 누락되어 있는 문제 수정 ([56a7034](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/56a703416a985d7aa7936e75715e4e166cfdff9e))
+
 ## [1.4.0](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/compare/1.3.1...1.4.0) (2025-12-24)
 
 
