@@ -63,10 +63,19 @@ Name: "{userappdata}\Microsoft\Internet Explorer\Quick Launch\{#MyAppName}"; Fil
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 
+[CustomMessages]
+korean.StatusRegistry=자동 감지 설정을 정리하는 중입니다...
+korean.StatusUAC=UAC 우회 설정을 정리하는 중입니다...
+korean.StatusSplash=스플래시 스크린 설정을 정리하는 중입니다...
+korean.StatusConfig=사용자 설정을 초기화하는 중입니다...
+korean.StatusShader=쉐이더 캐시를 정리하는 중입니다...
+
 [UninstallRun]
-Filename: "{app}\{#MyAppExeName}"; Parameters: "--restore-uac"; Flags: runhidden waituntilterminated; RunOnceId: "RestoreUAC"
+Filename: "{app}\{#MyAppExeName}"; Parameters: "--disable-all-configs --cleanup-target=registry"; Flags: runhidden waituntilterminated; RunOnceId: "CleanupRegistry"; StatusMsg: "{cm:StatusRegistry}"
+Filename: "{app}\{#MyAppExeName}"; Parameters: "--disable-all-configs --cleanup-target=uac"; Flags: runhidden waituntilterminated; RunOnceId: "CleanupUAC"; StatusMsg: "{cm:StatusUAC}"
+Filename: "{app}\{#MyAppExeName}"; Parameters: "--disable-all-configs --cleanup-target=splash"; Flags: runhidden waituntilterminated; RunOnceId: "CleanupSplash"; StatusMsg: "{cm:StatusSplash}"
+Filename: "{app}\{#MyAppExeName}"; Parameters: "--disable-all-configs --cleanup-target=config"; Flags: runhidden waituntilterminated; RunOnceId: "CleanupConfig"; StatusMsg: "{cm:StatusConfig}"
 Filename: "{sys}\taskkill.exe"; Parameters: "/F /IM {#MyAppExeName} /T"; Flags: runhidden; RunOnceId: "KillProcess"
-Filename: "{sys}\reg.exe"; Parameters: "delete ""HKCU\Software\Microsoft\Windows\CurrentVersion\Run"" /v ""POE2_Patch_Butler_Watch"" /f"; Flags: runhidden; RunOnceId: "DelRegKey"
 
 [Registry]
 Root: HKCU; Subkey: "Software\NERDHEAD LAB\POE2 Patch Butler"; ValueType: string; ValueName: "InstallVersion"; ValueData: "{#MyAppVersion}"; Flags: uninsdeletekey

@@ -2,6 +2,14 @@ import fs from 'fs';
 import path from 'path';
 import { logger } from './logger.js';
 
+/**
+ * @file shaderCacheCleaner.ts
+ * @description
+ * Utility module specifically for managing Path of Exile 2's Shader Cache.
+ * It handles the detection and deletion of 'ShaderCache' directories located in AppData/Roaming.
+ * This is used to resolve graphical glitches or crashing issues caused by corrupted cache.
+ */
+
 export function getShaderCachePaths(): string[] {
     const appData = process.env.APPDATA;
     if (!appData) return [];
