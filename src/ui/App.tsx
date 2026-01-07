@@ -110,7 +110,9 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
     const [isSilentModeEnabled, setIsSilentModeEnabled] = useState(false);
     const [isAutoLaunchGameEnabled, setIsAutoLaunchGameEnabled] = useState(false);
     const [isBackupModeEnabled, setIsBackupModeEnabled] = useState(false);
+
     const [isUacBypassEnabled, setIsUacBypassEnabled] = useState(false);
+    const [isSplashEnabled, setIsSplashEnabled] = useState(false);
 
     // Title Version State
     const [titleVersion, setTitleVersion] = useState<string>(() => {
@@ -158,11 +160,16 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
                 const uac = await checkUac();
                 logger.info(`UAC Bypass: ${uac}`);
 
+                // Check Splash State
+                const { isSplashEnabled: checkSplash } = await import('../utils/splash.js');
+                const splash = await checkSplash();
+
                 setIsAutoDetectEnabled(autoDetect);
                 setIsSilentModeEnabled(silent);
                 setIsAutoLaunchGameEnabled(autoLaunch);
                 setIsBackupModeEnabled(backup);
                 setIsUacBypassEnabled(uac);
+                setIsSplashEnabled(splash);
 
                 if (autoDetect) {
                     logger.info(`오류 자동 감지 설정이 켜져 있습니다. 감시 프로세스를 시작합니다.\n( 실행 경로: ${process.execPath} --watch )`);
@@ -599,7 +606,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
         },
         {
             keyChar: 'C',
-            description: '설치 경로 수정',
+            description: 'POE2 설치 경로 수정',
             onClick: () => {
                 setForceInitEdit(true);
                 setScreen('INIT');
@@ -623,6 +630,30 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
                         const success = await enableUACBypass();
                         if (success) {
                             setIsUacBypassEnabled(true);
+                            ctx.setStatus(<Text color="green">ON</Text>);
+                        }
+                    }
+                })();
+            }
+        },
+        {
+            keyChar: 'L',
+            description: 'POE2 시작 시 로딩 시각화 (BETA):',
+            initialStatus: isSplashEnabled ? <Text color="green">ON</Text> : <Text color="red">OFF</Text>,
+            onClick: (ctx: any) => {
+                (async () => {
+                    const { enableSplash, disableSplash } = await import('../utils/splash.js');
+                    
+                    if (isSplashEnabled) {
+                        const success = await disableSplash();
+                        if (success) {
+                            setIsSplashEnabled(false);
+                            ctx.setStatus(<Text color="red">OFF</Text>);
+                        }
+                    } else {
+                        const success = await enableSplash();
+                        if (success) {
+                            setIsSplashEnabled(true);
                             ctx.setStatus(<Text color="green">ON</Text>);
                         }
                     }
@@ -681,7 +712,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
             initialStatus: updateInfo ? <Text color="green">업데이트 ({appVersion} {'->'} {updateInfo.version})</Text> : null,
             onClick: () => handleUpdate()
         }
-    ], [isAutoDetectEnabled, isSilentModeEnabled, isAutoLaunchGameEnabled, isBackupModeEnabled, isUacBypassEnabled, installPath, serverPort, appVersion, titleVersion, maxSeenTitleVersion]);
+    ], [isAutoDetectEnabled, isSilentModeEnabled, isAutoLaunchGameEnabled, isBackupModeEnabled, isUacBypassEnabled, isSplashEnabled, installPath, serverPort, appVersion, titleVersion, maxSeenTitleVersion]);
 
     // Calculate Dynamic Sidebar Width
     const sidebarWidth = React.useMemo(() => {

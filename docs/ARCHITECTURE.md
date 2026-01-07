@@ -99,6 +99,7 @@ Node.js 및 TypeScript 표준 컨벤션을 따릅니다.
 | **F**      | Init      | **무시하고 진행 (Ignore)** |
 | **1~3, 0** | MainMenu  | 메뉴 선택                  |
 | **\***     | Sidebar   | UAC 팝업 제거 (BETA)       |
+| **L**      | Sidebar   | 로딩 시각화 (Splash)       |
 
 ## 4. Glossary & Terminology
 

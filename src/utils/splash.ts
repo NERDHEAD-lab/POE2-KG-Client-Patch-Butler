@@ -144,30 +144,34 @@ function writeAsset(dir: string, filename: string, base64: string) {
     }
 }
 
-export function showSplash() {
+export async function showSplash() {
     if (splashProcess) return;
 
+    // Check if enabled
+    if (!(await isSplashEnabled())) {
+        return;
+    }
+
     const binDir = getBinDirectory();
-    
-    // Ensure assets exist in binDir
-    writeAsset(binDir, 'logo.png', SPLASH_LOGO_BASE64);
-    
-    // Clean status file
+    const scriptPath = join(binDir, SPLASH_SCRIPT_NAME);
+
+    // Clean status file (Reset state)
     const statusFile = join(binDir, 'splash_status.txt');
     try {
         if (existsSync(statusFile)) {
-            writeFileSync(statusFile, ''); // Clear it
+            writeFileSync(statusFile, '');
         }
     } catch (e) {}
 
-    const scriptPath = join(binDir, SPLASH_SCRIPT_NAME);
-
-    // Write script
-    try {
-        writeFileSync(scriptPath, '\uFEFF' + getSplashScriptContent(), { encoding: 'utf16le' });
-    } catch (e: any) {
-        logger.error(`Failed to create splash script: ${e.message}`);
-        return;
+    // Ensure Script Exists (Sanity Check)
+    if (!existsSync(scriptPath)) {
+        // If script is missing but enabled, re-generate it
+        try {
+            writeAsset(binDir, 'logo.png', SPLASH_LOGO_BASE64);
+            writeFileSync(scriptPath, '\uFEFF' + getSplashScriptContent(), { encoding: 'utf16le' });
+        } catch (e) {
+            return;
+        }
     }
 
     logger.info('스플래시 스크린을 표시합니다 (Debug Mode)...');
@@ -224,5 +228,69 @@ export function hideSplash() {
             splashProcess.kill();
         } catch (_error) { /* ignore */ }
         splashProcess = null;
+    }
+}
+
+// --- Toggle Feature ---
+const SPLASH_ENABLED_FILE = 'splash_enabled.txt';
+
+export async function isSplashEnabled(): Promise<boolean> {
+    const binDir = getBinDirectory();
+    const filePath = join(binDir, SPLASH_ENABLED_FILE);
+    try {
+        return existsSync(filePath);
+    } catch (e) {
+        return false;
+    }
+}
+
+export async function enableSplash(): Promise<boolean> {
+    const binDir = getBinDirectory();
+    const filePath = join(binDir, SPLASH_ENABLED_FILE);
+    try {
+        // 1. Mark as Enabled
+        writeFileSync(filePath, 'ENABLED');
+        
+        // 2. Write Assets (Pre-load)
+        // Logo
+        writeAsset(binDir, 'logo.png', SPLASH_LOGO_BASE64);
+        
+        // Script
+        const scriptPath = join(binDir, SPLASH_SCRIPT_NAME);
+        writeFileSync(scriptPath, '\uFEFF' + getSplashScriptContent(), { encoding: 'utf16le' });
+
+        return true;
+    } catch (e) {
+        logger.error(`Failed to enable splash: ${e}`);
+        return false;
+    }
+}
+
+export async function disableSplash(): Promise<boolean> {
+    const binDir = getBinDirectory();
+    
+    // Files to clean up
+    const filesToDelete = [
+        SPLASH_ENABLED_FILE,
+        'logo.png',
+        SPLASH_SCRIPT_NAME,
+        'splash_status.txt',
+        'splash_debug.log'
+    ];
+
+    try {
+        const { unlinkSync } = await import('node:fs');
+        
+        for (const file of filesToDelete) {
+            const path = join(binDir, file);
+            if (existsSync(path)) {
+                unlinkSync(path);
+            }
+        }
+        
+        return true;
+    } catch (e) {
+        logger.error(`Failed to disable splash: ${e}`);
+        return false;
     }
 }
