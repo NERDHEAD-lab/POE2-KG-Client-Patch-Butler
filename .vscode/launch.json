@@ -1,0 +1,47 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "NPM: dev",
+            "type": "node",
+            "request": "launch",
+            "runtimeExecutable": "npm",
+            "runtimeArgs": [
+                "run-script",
+                "dev"
+            ],
+            "console": "integratedTerminal",
+            "skipFiles": [
+                "<node_internals>/**"
+            ]
+        },
+        {
+            "name": "NPM: package",
+            "type": "node",
+            "request": "launch",
+            "runtimeExecutable": "npm",
+            "runtimeArgs": [
+                "run-script",
+                "package"
+            ],
+            "console": "integratedTerminal",
+            "skipFiles": [
+                "<node_internals>/**"
+            ]
+        },
+        {
+            "name": "NPM: package:force",
+            "type": "node",
+            "request": "launch",
+            "runtimeExecutable": "npm",
+            "runtimeArgs": [
+                "run-script",
+                "package:force"
+            ],
+            "console": "integratedTerminal",
+            "skipFiles": [
+                "<node_internals>/**"
+            ]
+        }
+    ]
+}

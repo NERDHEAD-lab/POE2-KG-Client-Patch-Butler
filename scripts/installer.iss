@@ -42,6 +42,7 @@ SetupIconFile=..\assets\icon.ico
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
+UninstallDisplayIcon={app}\{#MyAppExeName}
 
 [Languages]
 Name: "korean"; MessagesFile: "Korean.isl"
@@ -63,9 +64,12 @@ Name: "{userappdata}\Microsoft\Internet Explorer\Quick Launch\{#MyAppName}"; Fil
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 
+[CustomMessages]
+korean.StatusCleanup=모든 설정을 정리하는 중입니다...
+
 [UninstallRun]
+Filename: "{app}\{#MyAppExeName}"; Parameters: "--disable-all-configs"; Flags: waituntilterminated; RunOnceId: "CleanupConfig"; StatusMsg: "{cm:StatusCleanup}"
 Filename: "{sys}\taskkill.exe"; Parameters: "/F /IM {#MyAppExeName} /T"; Flags: runhidden; RunOnceId: "KillProcess"
-Filename: "{sys}\reg.exe"; Parameters: "delete ""HKCU\Software\Microsoft\Windows\CurrentVersion\Run"" /v ""POE2_Patch_Butler_Watch"" /f"; Flags: runhidden; RunOnceId: "DelRegKey"
 
 [Registry]
 Root: HKCU; Subkey: "Software\NERDHEAD LAB\POE2 Patch Butler"; ValueType: string; ValueName: "InstallVersion"; ValueData: "{#MyAppVersion}"; Flags: uninsdeletekey

@@ -81,7 +81,7 @@ export const checkSingleInstance = async (isFixPatch: boolean): Promise<boolean>
         const { stdout } = await execAsync(`powershell -ExecutionPolicy Bypass -File "${tempScriptPath}"`, { windowsHide: true });
 
         if (stdout.includes('FOUND_AND_FOCUSED')) {
-            logger.info('이미 실행중인 프로세스가 있습니다.'); // "Process already running."
+            logger.info('이미 실행 중인 프로세스가 있습니다.'); // "Process already running."
             return false; // Should exit
         }
 

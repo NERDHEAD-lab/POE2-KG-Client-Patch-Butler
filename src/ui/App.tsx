@@ -7,9 +7,14 @@ import CasePatchFailed from './Menu/CasePatchFailed.js';
 import CaseExecuteFailed from './Menu/CaseExecuteFailed.js';
 import CaseCrashing from './Menu/CaseCrashing.js';
 import CaseReportIssue from './Menu/CaseReportIssue.js';
+import CaseGameRunning from './Menu/CaseGameRunning.js';
+import { isProcessRunning, setConsoleSize } from '../utils/process.js';
 import Sidebar, { SidebarItemConfig } from './Sidebar.js';
 import OutputBox from './OutputBox.js';
-import RainbowText from './RainbowText.js';
+import RainbowWaveText from './title/RainbowWaveText.js';
+import RainbowText from './title/RainbowText.js';
+import SimpleText from './title/SimpleText.js';
+import { TitleProps } from './title/types.js';
 import { getAppVersion } from '../utils/version.js';
 import { checkForUpdate } from '../utils/updater.js';
 import { performSelfUpdate } from '../utils/selfUpdate.js';
@@ -19,15 +24,49 @@ import path from 'node:path';
 import os from 'node:os';
 import { logger } from '../utils/logger.js';
 import { onExtensionEnableAutoLaunch } from '../utils/server.js';
-import { getAutoLaunchGameEnabled, setAutoLaunchGameEnabled, getSilentModeEnabled, getBackupEnabled, setBackupEnabled } from '../utils/config.js';
+import { getAutoLaunchGameEnabled, setAutoLaunchGameEnabled, getSilentModeEnabled, getBackupEnabled, setBackupEnabled, _getTitleVersion, _setTitleVersion, _getMaxSeenTitleVersion, _setMaxSeenTitleVersion } from '../utils/config.js';
 import { isAutoDetectRegistryEnabled, restartWatcher, stopWatcherProcess, enableAutoDetectRegistry, disableAutoDetectRegistry } from '../utils/autoDetect.js';
 
-type Screen = 'INIT' | 'MAIN_MENU' | 'CASE_1' | 'CASE_2' | 'CASE_3' | 'CASE_0';
+type Screen = 'INIT' | 'MAIN_MENU' | 'CASE_1' | 'CASE_2' | 'CASE_3' | 'CASE_0' | 'GAME_WARNING';
 
 interface AppProps {
     initialMode?: 'NORMAL' | 'FIX_PATCH';
     serverPort?: number;
 }
+
+interface TitleDef {
+    version: string;
+    component: React.ComponentType<TitleProps>;
+    props: Omit<TitleProps, 'children'>; // Props to bind (color, interval, etc)
+    textTemplate: string;
+}
+
+const TITLE_DEFINITIONS: TitleDef[] = [
+    {
+        version: 'v1.0.0',
+        component: SimpleText,
+        props: { color: '#FFFF66' }, // Light Yellow
+        textTemplate: 'POE2 KG Client Patch Butler v{version}'
+    },
+    {
+        version: 'v1.1.0',
+        component: SimpleText,
+        props: { color: '#FFA500' }, // Orange
+        textTemplate: 'POE2 카카오게임즈 클라이언트 오류 해결 마법사 v{version}'
+    },
+    {
+        version: 'v1.4.0',
+        component: RainbowText,
+        props: { interval: 200 },
+        textTemplate: 'POE2 카카오게임즈 클라이언트 오류 해결 마법사 v{version}'
+    },
+    {
+        version: 'v1.5.0',
+        component: RainbowWaveText,
+        props: { interval: 50 },
+        textTemplate: 'POE2 카카오게임즈 클라이언트 오류 해결 마법사 v{version}'
+    }
+];
 
 const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => {
     const { exit } = useApp();
@@ -53,8 +92,15 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
 
     // Always start at INIT to ensure installPath is loaded context correctly
     const [screen, setScreen] = useState<Screen>('INIT');
+    const [previousScreen, setPreviousScreen] = useState<Screen | null>(null);
     const [installPath, setInstallPath] = useState('');
     const [appVersion, setAppVersion] = useState(getAppVersion());
+
+    // Game Process Detection State
+    const [lastGameStatus, setLastGameStatus] = useState(false);
+
+    // Force Init Edit State (Manual Path Change)
+    const [forceInitEdit, setForceInitEdit] = useState(false);
 
     // Extension Connection State
     const [isExtensionConnected, setIsExtensionConnected] = useState(false);
@@ -64,6 +110,19 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
     const [isSilentModeEnabled, setIsSilentModeEnabled] = useState(false);
     const [isAutoLaunchGameEnabled, setIsAutoLaunchGameEnabled] = useState(false);
     const [isBackupModeEnabled, setIsBackupModeEnabled] = useState(false);
+
+    const [isUacBypassEnabled, setIsUacBypassEnabled] = useState(false);
+    const [isSplashEnabled, setIsSplashEnabled] = useState(false);
+
+    // Title Version State
+    const [titleVersion, setTitleVersion] = useState<string>(() => {
+        const saved = _getTitleVersion();
+        return saved || TITLE_DEFINITIONS[TITLE_DEFINITIONS.length - 1].version;
+    });
+    const [maxSeenTitleVersion, setMaxSeenTitleVersion] = useState<string>(() => {
+        const saved = _getMaxSeenTitleVersion();
+        return saved || TITLE_DEFINITIONS[TITLE_DEFINITIONS.length - 1].version;
+    });
 
     useEffect(() => {
         // Listen for enabled signal
@@ -96,18 +155,29 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
                 const autoLaunch = getAutoLaunchGameEnabled();
                 const backup = getBackupEnabled();
 
+                // Dynamic Import for UAC check to avoid blocking
+                const { isUACBypassEnabled: checkUac } = await import('../utils/uac.js');
+                const uac = await checkUac();
+                logger.info(`UAC Bypass: ${uac}`);
+
+                // Check Splash State
+                const { isSplashEnabled: checkSplash } = await import('../utils/splash.js');
+                const splash = await checkSplash();
+
                 setIsAutoDetectEnabled(autoDetect);
                 setIsSilentModeEnabled(silent);
                 setIsAutoLaunchGameEnabled(autoLaunch);
                 setIsBackupModeEnabled(backup);
+                setIsUacBypassEnabled(uac);
+                setIsSplashEnabled(splash);
 
                 if (autoDetect) {
-                    logger.info('Registry: Auto-detect ON. Starting watcher process...');
+                    logger.info(`오류 자동 감지 설정이 켜져 있습니다. 감시 프로세스를 시작합니다.\n( 실행 경로: ${process.execPath} --watch )`);
                     await restartWatcher();
-                    logger.success('Watcher process started with --watch');
+                    logger.success('감시 프로세스가 실행되었습니다.');
                 }
             } catch (e) {
-                logger.error('Failed to initialize app states: ' + e);
+                logger.error('앱 상태 초기화 실패: ' + e);
             }
         };
         initAppStates();
@@ -116,6 +186,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
     const handleInitDone = (path: string, version: string) => {
         setInstallPath(path);
         setAppVersion(version);
+        setForceInitEdit(false); // Reset forcing edit
 
         if (initialMode === 'FIX_PATCH') {
             setScreen('CASE_1');
@@ -128,8 +199,47 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
     const [downloadProgress, setDownloadProgress] = useState(0);
     const [initStatus, setInitStatus] = useState<'LOADING' | 'PROCESS_CHECK' | 'CONFIRM' | 'INPUT' | null>(null);
 
+    // Runtime Game Detection Polling
+    useEffect(() => {
+        const checkGameProcess = async () => {
+            if (screen === 'INIT') return;
+
+            const isGameRunning = await isProcessRunning('PathOfExile_KG.exe');
+
+            // 1. Normal Detection: Game OFF -> ON
+            if (screen !== 'GAME_WARNING') {
+                if (!lastGameStatus && isGameRunning) {
+                    setPreviousScreen(screen);
+                    setScreen('GAME_WARNING');
+                }
+            } 
+            // 2. Warning State Logic: Check if Launcher is closed
+            else if (screen === 'GAME_WARNING') {
+                // If the game itself closes, we might want to auto-close too, 
+                // BUT the user specifically asked for "Launcher closes -> Close warning".
+                // (Since closing the launcher usually implies the game session is ending or user gave up)
+                const isLauncherRunning = await isProcessRunning('POE2_Launcher.exe');
+                
+                if (!isLauncherRunning) {
+                     // Auto-dismiss the warning
+                     handleIgnoreGameWarning();
+                }
+            }
+
+            setLastGameStatus(isGameRunning);
+        };
+        
+        const intervalId = setInterval(checkGameProcess, 3000); // Check every 3 seconds
+        
+        // Initial check immediately to set baseline
+        checkGameProcess();
+
+        return () => clearInterval(intervalId);
+    }, [screen, lastGameStatus]); // Dependencies: re-run if screen changes to avoid stale state issues, though careful with interval
+
     React.useEffect(() => {
-        logger.info(`App Initialized (v${getAppVersion()})` + (serverPort ? ` [Server: ${serverPort}]` : ''));
+        const serverInfo = serverPort ? ` (Server Port: ${serverPort})` : '';
+        logger.info(`POE2 패치 도우미가 시작되었습니다. v${getAppVersion()}${serverInfo}`);
 
         // Fetch Server Notice
         const fetchNotice = async () => {
@@ -147,7 +257,29 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
                 // Ignore parsing errors or network failures
             }
         };
+
         fetchNotice();
+
+        const checkUpdate = async () => {
+            if (process.env.NODE_ENV === 'development') return;
+            
+            // logger.info('업데이트 확인 중...'); // Silent check or keep it? User prefers less noise maybe.
+            try {
+                const res = await checkForUpdate();
+                if (res.hasUpdate && res.downloadUrl) {
+                    logger.info(`새 업데이트 발견: v${res.latestVersion}`);
+                    setUpdateInfo({ url: res.downloadUrl, version: res.latestVersion, updateType: res.updateType });
+                } else {
+                    // logger.info('최신 버전입니다.'); // Silent success to avoid spamming output box on reload? 
+                    // Or keep it but now it only runs ONCE on app launch, which is fine.
+                    // Let's comment it out to be cleaner, or log to console only if we had one.
+                    // logger.success('최신 버전입니다.');
+                }
+            } catch (e) {
+                // Ignore update check fail
+            }
+        };
+        checkUpdate();
     }, []);
 
     const handleUpdate = () => {
@@ -193,7 +325,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
             await disableAutoDetectRegistry();
             await stopWatcherProcess();
             setIsAutoDetectEnabled(false);
-            logger.warn('자동 감지 기능을 껐습니다. (Watcher Stopped)');
+            logger.warn('오류 자동 감지 모드를 껐습니다.');
             return false;
         } else {
             // Turning ON
@@ -201,7 +333,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
                 await enableAutoDetectRegistry();
                 await restartWatcher(); // Use restart for clean start
                 setIsAutoDetectEnabled(true);
-                logger.success('자동 감지 기능을 켰습니다. 업데이트 실패 시 자동으로 해결합니다.');
+                logger.success(`오류 자동 감지 모드를 켰습니다. ( ${process.execPath} --watch )`);
                 return true;
             } catch (e) {
                 logger.error('자동 감지 설정 실패: ' + e);
@@ -246,6 +378,16 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
         }
     };
 
+    const handleIgnoreGameWarning = () => {
+        if (previousScreen) {
+            setScreen(previousScreen);
+            setPreviousScreen(null);
+            setLastGameStatus(true); 
+        } else {
+            setScreen('MAIN_MENU'); // Fallback
+        }
+    };
+
     const renderBody = () => {
         if (isUpdating) {
             return (
@@ -258,7 +400,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
 
         switch (screen) {
             case 'INIT':
-                return <Init onDone={handleInitDone} onExit={handleAppExit} onStatusChange={setInitStatus} onPathDetected={(path) => setInstallPath(path)} isAutoFix={initialMode === 'FIX_PATCH'} />;
+                return <Init onDone={handleInitDone} onExit={handleAppExit} onStatusChange={setInitStatus} onPathDetected={(path) => setInstallPath(path)} isAutoFix={initialMode === 'FIX_PATCH'} forceEdit={forceInitEdit} />;
             case 'MAIN_MENU':
                 return <MainMenu onSelect={handleMenuSelect} onExit={handleAppExit} />;
             case 'CASE_1':
@@ -271,6 +413,8 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
                 return <CaseCrashing onGoBack={() => setScreen('MAIN_MENU')} />;
             case 'CASE_0':
                 return <CaseReportIssue onGoBack={() => setScreen('MAIN_MENU')} />;
+            case 'GAME_WARNING':
+                return <CaseGameRunning onIgnore={handleIgnoreGameWarning} onExit={handleAppExit} />;
             default:
                 return null;
         }
@@ -278,15 +422,21 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
 
     const isInputActive = !(screen === 'INIT' && initStatus === 'INPUT');
 
-    const sidebarItems: SidebarItemConfig[] = React.useMemo(() => [
+    const sidebarItems: SidebarItemConfig[] = React.useMemo<SidebarItemConfig[]>(() => [
+        {
+            description: '패치 오류 도구',
+            type: 'separator'
+        },
         {
             keyChar: 'A',
             description: '오류 자동 감지:',
             initialStatus: isAutoDetectEnabled ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>,
-            onClick: async (ctx: any) => {
-                const newState = await toggleAutoDetect();
-                setIsAutoDetectEnabled(newState);
-                ctx.setStatus(newState ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>);
+            onClick: (ctx: any) => {
+                (async () => {
+                    const newState = await toggleAutoDetect();
+                    setIsAutoDetectEnabled(newState);
+                    ctx.setStatus(newState ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>);
+                })();
             }
         },
         {
@@ -295,12 +445,20 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
             isChild: true,
             disabled: !isAutoDetectEnabled,
             initialStatus: isSilentModeEnabled ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>,
-            onClick: async (ctx: any) => {
-                const { setSilentModeEnabled } = await import('../utils/config.js');
-                const newState = !isSilentModeEnabled;
-                setSilentModeEnabled(newState);
-                setIsSilentModeEnabled(newState);
-                ctx.setStatus(newState ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>);
+            onClick: (ctx: any) => {
+                (async () => {
+                    const { setSilentModeEnabled } = await import('../utils/config.js');
+                    const newState = !isSilentModeEnabled;
+                    setSilentModeEnabled(newState);
+                    setIsSilentModeEnabled(newState);
+                    ctx.setStatus(newState ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>);
+                    
+                    if (newState) {
+                        logger.success('자동 진행 모드를 켰습니다.');
+                    } else {
+                        logger.warn('자동 진행 모드를 껐습니다.');
+                    }
+                })();
             }
         },
         {
@@ -309,34 +467,45 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
             isChild: true,
             disabled: !isAutoDetectEnabled,
             initialStatus: isAutoLaunchGameEnabled ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>,
-            onClick: async (ctx: any) => {
+            onClick: (ctx: any) => {
                 if (isAutoLaunchGameEnabled) {
                     setAutoLaunchGameEnabled(false);
                     setIsAutoLaunchGameEnabled(false);
                     ctx.setStatus(<Text color="red"> OFF</Text>);
+                    logger.warn('게임 자동 시작 설정을 껐습니다.');
                 } else {
+                    logger.info('게임 자동 시작 설정을 켜기 위해 브라우저를 엽니다...');
                     spawn('cmd', ['/c', 'start', '""', `\"https://nerdhead-lab.github.io/POE2-quick-launch-for-kakao/butler.html?ext_port=${serverPort}&action=enable_auto_launch\"`], { windowsVerbatimArguments: true });
                 }
             }
         },
         {
+            description: '백업 도구',
+            type: 'separator'
+        },
+        {
             keyChar: 'B',
             description: '패치 백업 모드:',
             initialStatus: isBackupModeEnabled ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>,
-            onClick: async (ctx: any) => {
-                const newState = !isBackupModeEnabled;
-                setBackupEnabled(newState);
-                setIsBackupModeEnabled(newState);
+            onClick: (ctx: any) => {
+                (async () => {
+                    const newState = !isBackupModeEnabled;
+                    setBackupEnabled(newState);
+                    setIsBackupModeEnabled(newState);
 
-                if (!newState && installPath) {
-                    const { deleteBackup } = await import('../utils/restore.js');
-                    await deleteBackup(installPath);
-                }
+                    if (!newState && installPath) {
+                        const { deleteBackup } = await import('../utils/restore.js');
+                        await deleteBackup(installPath);
+                        logger.warn('패치 백업 모드를 껐습니다. (기존 백업 삭제)');
+                    } else {
+                        logger.success('패치 백업 모드를 켰습니다.');
+                    }
 
-                const { notifyBackupCreated } = await import('../utils/backupObserver.js');
-                notifyBackupCreated();
+                    const { notifyBackupCreated } = await import('../utils/backupObserver.js');
+                    notifyBackupCreated();
 
-                ctx.setStatus(newState ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>);
+                    ctx.setStatus(newState ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>);
+                })();
             }
         },
         {
@@ -378,30 +547,136 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
                     if (unsubscribe) unsubscribe();
                 };
             },
-            onClick: async (ctx: any) => {
+            onClick: (ctx: any) => {
                 if (!installPath) {
                     logger.error('설치 경로가 설정되지 않았습니다.');
                     return;
                 }
-                const { restoreBackup } = await import('../utils/restore.js');
-                const success = await restoreBackup(installPath);
-                if (success) {
-                    ctx.setStatus(<Text color="green">복구 완료!</Text>);
+                (async () => {
+                    logger.info('백업 복구를 시도합니다...');
+                    const { restoreBackup } = await import('../utils/restore.js');
+                    const success = await restoreBackup(installPath);
+                    if (success) {
+                        ctx.setStatus(<Text color="green">복구 완료!</Text>);
+                        logger.success('백업 파일이 복구되었습니다.');
+                    } else {
+                        logger.error('백업 복구에 실패했습니다.');
+                    }
+                })();
+            }
+        },
+        {
+            description: '환경설정',
+            type: 'separator'
+        },
+        {
+            keyChar: 'T',
+            description: `타이틀 버전:`,
+            initialStatus: <Text color="green">{titleVersion}</Text>,
+            // isChild: false, // Explicitly false or undefined (parent)
+            initialVisible: true,
+            onClick: (ctx: any) => {
+                const currentIndex = TITLE_DEFINITIONS.findIndex(d => d.version === titleVersion);
+                const nextIndex = (currentIndex + 1) % TITLE_DEFINITIONS.length;
+                const nextVersion = TITLE_DEFINITIONS[nextIndex].version;
+
+                setTitleVersion(nextVersion);
+                _setTitleVersion(nextVersion);
+                
+                // Update Max Seen if needed
+                const currentMaxSeenIndex = TITLE_DEFINITIONS.findIndex(d => d.version === maxSeenTitleVersion);
+                // If we select a version that is "newer" (higher index) than what we've seen, update max seen.
+                // Note: The user logic implies if we check v1.6.0, we saw it.
+                if (nextIndex > currentMaxSeenIndex) {
+                    setMaxSeenTitleVersion(nextVersion);
+                    _setMaxSeenTitleVersion(nextVersion);
                 }
             }
         },
         {
+            description: '',
+            isChild: true,
+            initialVisible: (() => {
+                const latestDef = TITLE_DEFINITIONS[TITLE_DEFINITIONS.length - 1];
+                const maxSeenIndex = TITLE_DEFINITIONS.findIndex(d => d.version === maxSeenTitleVersion);
+                const latestIndex = TITLE_DEFINITIONS.findIndex(d => d.version === latestDef.version);
+                return latestIndex > maxSeenIndex;
+            })(),
+            initialStatus: <Text color="green">New version available!</Text>
+        },
+        {
+            keyChar: 'C',
+            description: 'POE2 설치 경로 수정',
+            onClick: () => {
+                setForceInitEdit(true);
+                setScreen('INIT');
+            }
+        },
+        {
+            keyChar: '*',
+            description: 'Daumgamestarter 팝업제거 패치 (BETA):',
+            initialStatus: isUacBypassEnabled ? <Text color="green">ON</Text> : <Text color="red">OFF</Text>,
+            onClick: (ctx: any) => {
+                (async () => {
+                    const { enableUACBypass, disableUACBypass } = await import('../utils/uac.js');
+                    
+                    if (isUacBypassEnabled) {
+                        const success = await disableUACBypass();
+                        if (success) {
+                            setIsUacBypassEnabled(false);
+                            ctx.setStatus(<Text color="red">OFF</Text>);
+                        }
+                    } else {
+                        const success = await enableUACBypass();
+                        if (success) {
+                            setIsUacBypassEnabled(true);
+                            ctx.setStatus(<Text color="green">ON</Text>);
+                        }
+                    }
+                })();
+            }
+        },
+        {
+            keyChar: 'L',
+            description: 'POE2 시작 시 로딩 시각화 (BETA):',
+            initialStatus: isSplashEnabled ? <Text color="green">ON</Text> : <Text color="red">OFF</Text>,
+            onClick: (ctx: any) => {
+                (async () => {
+                    const { enableSplash, disableSplash } = await import('../utils/splash.js');
+                    
+                    if (isSplashEnabled) {
+                        const success = await disableSplash();
+                        if (success) {
+                            setIsSplashEnabled(false);
+                            ctx.setStatus(<Text color="red">OFF</Text>);
+                        }
+                    } else {
+                        const success = await enableSplash();
+                        if (success) {
+                            setIsSplashEnabled(true);
+                            ctx.setStatus(<Text color="green">ON</Text>);
+                        }
+                    }
+                })();
+            }
+        },
+        {
+            description: '문서',
             type: 'separator'
         },
         {
             keyChar: 'P',
             description: '패치노트 확인',
-            onClick: () => handleOpenPatchNotes()
+            onClick: () => {
+                logger.info('패치노트 페이지를 엽니다.');
+                handleOpenPatchNotes();
+            }
         },
         {
             keyChar: 'W',
             description: '작동원리',
             onClick: () => {
+                logger.info('작동원리 설명 페이지를 엽니다.');
                 spawn('cmd', ['/c', 'start', 'https://nerdhead-lab.github.io/POE2-KG-Client-Patch-Butler?docs=PRINCIPLES.md'], { windowsVerbatimArguments: true });
             }
         },
@@ -409,6 +684,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
             keyChar: 'I',
             description: '피드백',
             onClick: () => {
+                logger.info('이슈 제보 페이지를 엽니다.');
                 spawn('cmd', ['/c', 'start', 'https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/issues'], { windowsVerbatimArguments: true });
             }
         },
@@ -416,6 +692,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
             keyChar: 'H',
             description: '자주 묻는 질문',
             onClick: () => {
+                logger.info('자주 묻는 질문 페이지를 엽니다.');
                 spawn('cmd', ['/c', 'start', 'https://nerdhead-lab.github.io/POE2-KG-Client-Patch-Butler?docs=FAQ.md'], { windowsVerbatimArguments: true });
             }
         },
@@ -424,52 +701,100 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
             keyChar: '/',
             description: '후원하기',
             onClick: () => {
+                logger.info('후원 페이지를 엽니다. 감사합니다!');
                 spawn('cmd', ['/c', 'start', 'https://nerdhead-lab.github.io/POE2-KG-Client-Patch-Butler?docs=SUPPORT.md'], { windowsVerbatimArguments: true });
             }
         },
         {
             keyChar: 'U',
             description: '',
-            initialVisible: false,
-            onInit: (ctx: any) => {
-                (async () => {
-                    if (process.env.NODE_ENV === 'development') {
-                        return;
-                    }
-
-                    logger.info('업데이트 확인 중...');
-                    const res = await checkForUpdate();
-                    if (res.hasUpdate && res.downloadUrl) {
-                        logger.info(`새 업데이트 발견: v${res.latestVersion}`);
-                        setUpdateInfo({ url: res.downloadUrl, version: res.latestVersion, updateType: res.updateType });
-                        ctx.setVisible(true);
-                        ctx.setStatus(<Text color="green">업데이트 ({appVersion} {'->'} {res.latestVersion})</Text>);
-                    } else {
-                        logger.info('최신 버전입니다.');
-                        // setInitStatus('CONFIRM'); // To allow user to proceed
-                    }
-                })();
-            },
+            initialVisible: !!updateInfo,
+            initialStatus: updateInfo ? <Text color="green">업데이트 ({appVersion} {'->'} {updateInfo.version})</Text> : null,
             onClick: () => handleUpdate()
         }
-    ], [isAutoDetectEnabled, isSilentModeEnabled, isAutoLaunchGameEnabled, isBackupModeEnabled, installPath, serverPort, appVersion]);
+    ], [isAutoDetectEnabled, isSilentModeEnabled, isAutoLaunchGameEnabled, isBackupModeEnabled, isUacBypassEnabled, isSplashEnabled, installPath, serverPort, appVersion, titleVersion, maxSeenTitleVersion]);
+
+    // Calculate Dynamic Sidebar Width
+    const sidebarWidth = React.useMemo(() => {
+        const { getStringWidth } = require('../utils/text.js');
+        const baseMin = 34; // Minimum width equivalent to old fixed width
+        let max = baseMin;
+
+        sidebarItems.forEach(item => {
+            if (item.type === 'separator') return;
+            
+            // Layout: " [X] " (or " ㄴ ") + Description + Status
+            // Key part: 6 chars
+            let itemW = 6; 
+            if (item.description) {
+                itemW += getStringWidth(item.description);
+            }
+            
+            // Status buffer: precise check
+            if (item.initialStatus) {
+                 // Fallback heuristic
+                 itemW += 10; 
+            }
+
+            if (itemW > max) {
+                max = itemW;
+            }
+        });
+        
+        // Add Extra padding for border/safety if needed
+        return max + 2;
+    }, [sidebarItems]);
+
+    // Initial Layout Resize (Golden Ratio Width + Adaptive Height)
+    const hasResized = React.useRef(false);
+    useEffect(() => {
+        if (!hasResized.current && sidebarWidth > 30) { 
+            const visualSidebarWidth = sidebarWidth + 4; // Account for border/padding (+4 safety)
+            const targetCols = Math.ceil(visualSidebarWidth * 2.618); // Golden Ratio Reference for Width
+
+            // Height logic: Adaptive to content
+            // We count the actual visible items in the sidebar to determine necessary height.
+            const visibleItemsCount = sidebarItems.filter(item => item.initialVisible !== false).length;
+            
+            // Total Rows Calculation (Detailed Breakdown):
+            // 1. Root Padding Top: 1
+            // 2. Header (Title + Margin): 2
+            // 3. Sidebar Borders (Top + Bottom): 2
+            // 4. OutputBox (MarginTop 1 + Borders 2 + Content 1): 4
+            // 5. Footer (2 lines): 2
+            // 6. Root Padding Bottom: 1
+            // Constant Overhead = 12 lines
+            
+            // Target Height = Visible Items + Constant Overhead (12) + User Requested Padding (2)
+            const targetRows = visibleItemsCount + 14;
+            
+            setConsoleSize(targetCols, targetRows);
+            hasResized.current = true;
+        }
+    }, [sidebarWidth, sidebarItems]);
 
     return (
         <Box flexDirection="column" padding={1} minHeight={dimensions.rows} width={dimensions.columns}>
             {/* Header */}
             <Box flexDirection="column" marginBottom={1}>
-                {/* Rainbow Title */}
-                <RainbowText>POE2 카카오게임즈 클라이언트 오류 해결 마법사 v{appVersion}</RainbowText>
+                {/* Dynamic Title Rendering */}
+                {(() => {
+                    const currentDef = TITLE_DEFINITIONS.find(d => d.version === titleVersion) || TITLE_DEFINITIONS[TITLE_DEFINITIONS.length - 1];
+                    const titleText = currentDef.textTemplate.replace('{version}', appVersion);
+                    const Component = currentDef.component;
 
-                {/* Server Notice */}
-
+                    return (
+                        <Component {...currentDef.props}>
+                            {titleText}
+                        </Component>
+                    );
+                })()}
             </Box>
 
             {/* Main Layout: Row [Content | Sidebar] */}
             <Box flexDirection="row" flexGrow={1} alignItems="stretch">
                 {/* Main Content Info */}
-                <Box flexDirection="column" width={Math.max(0, dimensions.columns - 34)}>
-                    {/* Server Notice moved here */}
+                <Box flexDirection="column" width={Math.max(0, dimensions.columns - sidebarWidth)}>
                     {serverNotice && (
                         <Box flexDirection="column" marginBottom={1}>
                             <Box borderStyle="single" borderColor="white" paddingX={1} marginTop={0} flexDirection="column">
@@ -485,7 +810,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
 
                 {/* Sidebar (Right) */}
                 <Sidebar
-                    key={`${installPath}-${isAutoDetectEnabled}-${isSilentModeEnabled}-${isAutoLaunchGameEnabled}-${isBackupModeEnabled}-${isExtensionConnected}`} // Force remount on foundational state changes
+                    key={`${installPath}-${isAutoDetectEnabled}-${isSilentModeEnabled}-${isAutoLaunchGameEnabled}-${isBackupModeEnabled}-${isUacBypassEnabled}-${isExtensionConnected}-${titleVersion}-${maxSeenTitleVersion}`} // Force remount on foundational state changes
                     isActive={isInputActive}
                     items={sidebarItems} />
             </Box>

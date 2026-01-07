@@ -15,6 +15,15 @@ export interface SidebarItemConfig {
     initialVisible?: boolean;
     isChild?: boolean;
     disabled?: boolean;
+    /**
+     * Called when the Sidebar item initializes.
+     * 
+     * [!WARNING]
+     * The Sidebar component is frequently REMOUNTED when App state changes (to reset UI).
+     * This `onInit` will re-run every time.
+     * DO NOT put expensive or non-idempotent one-time logic (like App update checks) here.
+     * Lift such state up to `App.tsx` instead.
+     */
     onInit?: (ctx: SidebarContext) => void | (() => void);
     onClick?: (ctx: SidebarContext) => void;
 }
@@ -30,6 +39,8 @@ interface ItemState {
     visible: boolean;
 }
 
+import { getStringWidth } from '../utils/text.js';
+
 const Sidebar: React.FC<SidebarProps> = ({ items, isActive }) => {
     // We strictly assume 'items' config array is static or at least stable in length/order for this simple implementation.
     // If items change dynamically, this detailed state management would need keys.
@@ -40,6 +51,15 @@ const Sidebar: React.FC<SidebarProps> = ({ items, isActive }) => {
             visible: i.initialVisible ?? true
         }))
     );
+
+    // Sync itemStates with items whenever items prop changes (reactivity fix)
+    useEffect(() => {
+        setItemStates(items.map(i => ({
+            description: i.description,
+            status: i.initialStatus || null,
+            visible: i.initialVisible ?? true
+        })));
+    }, [items]);
 
     // Initializer
     useEffect(() => {
@@ -118,18 +138,68 @@ const Sidebar: React.FC<SidebarProps> = ({ items, isActive }) => {
         });
     });
 
+    // Dynamic Width Calculation
+    // Calculates the maximum width required by the visible items
+    // Base width: 28 (minimum)
+    // Item width formula:
+    //   Key Part: 6 chars (" [X] " or " L [X] ")
+    //   Description: getStringWidth(desc)
+    //   Status: getStringWidth(status text) -> approximate, using 10 as buffer if status is ReactNode
+    //   Gap: 1 char
+    const maxContentWidth = React.useMemo(() => {
+        const baseMin = 28;
+        let max = baseMin;
+
+        itemStates.forEach((state, index) => {
+            const config = items[index];
+            if (!state.visible || config.type === 'separator') return;
+
+            let itemW = 6; // Key part "[A] "
+            itemW += getStringWidth(state.description || '');
+
+            if (state.status) {
+                itemW += 10; 
+            }
+
+            if (itemW > max) {
+                max = itemW;
+            }
+        });
+
+        return max + 2; // Add some padding
+    }, [itemStates, items]);
+
+
     return (
         <Box flexDirection="column" marginLeft={1}>
-            <Box borderStyle="single" paddingX={1} minWidth={28} flexDirection="column" flexGrow={1}>
+            <Box borderStyle="single" paddingX={1} minWidth={maxContentWidth} flexDirection="column" flexGrow={1}>
                 <Box flexDirection="column">
                     {itemStates.map((state, index) => {
                         const config = items[index];
                         if (!state.visible) return null;
 
                         if (config.type === 'separator') {
+                            const desc = state.description;
+                            let separatorText = '';
+
+                            if (desc) {
+                                // " Description ----------------- " style
+                                const targetW = maxContentWidth - 4; // approximate content area
+                                
+                                // Basic padding: "desc " + dashes
+                                let baseText = `${desc} `;
+                                const currentW = getStringWidth(baseText);
+                                const remainingW = Math.max(0, targetW - currentW);
+                                
+                                separatorText = baseText + '-'.repeat(remainingW);
+                            } else {
+                                // Simple line
+                                separatorText = '-'.repeat(maxContentWidth - 4);
+                            }
+
                             return (
                                 <Box key={index} flexDirection="row" marginY={0}>
-                                    <Text color="gray">------------------------</Text>
+                                    <Text color="gray">{separatorText}</Text>
                                 </Box>
                             );
                         }

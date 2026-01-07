@@ -24,6 +24,12 @@ const config = new ConfClass({
         isBackupEnabled: {
             type: 'boolean',
             default: false
+        },
+        titleVersion: {
+            type: 'string'
+        },
+        maxSeenTitleVersion: {
+            type: 'string'
         }
     },
 });
@@ -52,6 +58,24 @@ export const getConfigDirectory = (): string => {
 // Returns the root application data folder (.../poe2-patch-butler)
 export const getAppDataDirectory = (): string => {
     return APP_DATA_ROOT;
+};
+
+// Returns the binary directory (.../bin)
+export const getBinDirectory = (): string => {
+    const binDir = path.join(APP_DATA_ROOT, 'bin');
+    if (!fs.existsSync(binDir)) {
+        try { fs.mkdirSync(binDir, { recursive: true }); } catch (e) { console.error(e); }
+    }
+    return binDir;
+};
+
+// Returns the logs directory (.../logs)
+export const getLogsDirectory = (): string => {
+    const logsDir = path.join(APP_DATA_ROOT, 'logs');
+    if (!fs.existsSync(logsDir)) {
+        try { fs.mkdirSync(logsDir, { recursive: true }); } catch (e) { console.error(e); }
+    }
+    return logsDir;
 };
 
 export const getLastInstallPath = (): string | undefined => {
@@ -96,5 +120,21 @@ export const getAutoLaunchGameEnabled = (): boolean => {
 
 export const setAutoLaunchGameEnabled = (enabled: boolean): void => {
     config.set('AutoLaunchGame', enabled);
+};
+
+export const _setTitleVersion = (version: string): void => {
+    config.set('titleVersion', version);
+};
+
+export const _getTitleVersion = (): string | undefined => {
+    return config.get('titleVersion') as string | undefined;
+};
+
+export const _setMaxSeenTitleVersion = (version: string): void => {
+    config.set('maxSeenTitleVersion', version);
+};
+
+export const _getMaxSeenTitleVersion = (): string | undefined => {
+    return config.get('maxSeenTitleVersion') as string | undefined;
 };
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Box, Text, useInput } from 'ink';
 import { parseLog, LogParseResult, WHITELIST } from '../../utils/logParser.js';
 import { downloadFiles } from '../../utils/downloader.js';
-import { getShaderCachePaths, clearShaderCache } from '../../utils/cleaner.js';
+import { getShaderCachePaths, clearShaderCache } from '../../utils/shaderCacheCleaner.js';
 import { runPackCheck } from '../../utils/launcher.js';
 import path from 'path';
 import fs from 'fs';

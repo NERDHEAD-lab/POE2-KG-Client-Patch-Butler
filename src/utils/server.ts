@@ -76,7 +76,7 @@ export const startServer = async (): Promise<number> => {
                 });
             });
 
-            logger.info(`Local server started on port ${port}`);
+            logger.info(`로컬 통신 서버가 시작되었습니다. (Port: ${port})`);
             return port;
         } catch (e) {
             // Port in use, try next one

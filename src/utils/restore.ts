@@ -43,10 +43,10 @@ export const restoreBackup = async (installPath: string): Promise<boolean> => {
             restoredCount++;
         }
 
-        logger.success(`백업 복구 완료: ${restoredCount}개 항목 복원됨.`);
+        logger.success(`백업 복구 완료: ${restoredCount}개 항목이 성공적으로 복원되었습니다.`);
         return true;
     } catch (e) {
-        logger.error('백업 복구 실패: ' + e);
+        logger.error('백업 복구 중 오류가 발생했습니다: ' + e);
         return false;
     }
 };
@@ -55,7 +55,7 @@ export const deleteBackup = async (installPath: string): Promise<void> => {
     const backupDir = path.join(installPath, BACKUP_DIR_NAME);
     if (fs.existsSync(backupDir)) {
         await fs.promises.rm(backupDir, { recursive: true, force: true });
-        logger.info('백업 폴더가 제거되었습니다.');
+        logger.info('백업 폴더가 안전하게 제거되었습니다.');
     }
 };
 

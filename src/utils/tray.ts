@@ -233,7 +233,7 @@ export class Tray extends EventEmitter {
 
     setMenu(...items: Item[]) {
         if (!this.client) {
-            logger.warn('Tray: Client not connected, skipping setMenu');
+            logger.warn('트레이: 클라이언트가 연결되지 않았습니다. 메뉴 설정을 건너뜁니다.');
             return;
         }
         let payload = XML_HEAD;

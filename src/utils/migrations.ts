@@ -29,7 +29,7 @@ const migrations: Migration[] = [
             try {
                 fs.rmSync(oldPath, { recursive: true, force: true });
             } catch (e) {
-                logger.error('Failed to remove legacy config folder: ' + e);
+                logger.error('구버전 설정 폴더 삭제 실패: ' + e);
             }
         }
     },
@@ -60,7 +60,7 @@ const migrations: Migration[] = [
 
                 await enableAutoDetectRegistry();
             } catch (e) {
-                logger.error('Failed to migrate VBS location: ' + e);
+                logger.error('VBS 위치 마이그레이션 실패: ' + e);
             }
         },
     },
@@ -149,7 +149,7 @@ export const runMigrations = async () => {
             await migration.run();
             setLastMigratedVersion(migration.version);
         } catch (e) {
-            logger.error(`Migration ${migration.version} failed: ${e}`);
+            logger.error(`마이그레이션 ${migration.version} 실패: ${e}`);
             throw e;
         }
     }

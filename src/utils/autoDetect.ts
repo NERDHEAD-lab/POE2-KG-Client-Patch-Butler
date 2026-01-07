@@ -87,7 +87,7 @@ export const stopWatcherProcess = async (): Promise<void> => {
     try {
         await execAsync(`powershell -Command "${psCommand}"`, { windowsHide: true });
     } catch (e) {
-        logger.error('Failed to stop watcher process: ' + e);
+        logger.error('감시 프로세스 중지 실패: ' + e);
     }
 };
 

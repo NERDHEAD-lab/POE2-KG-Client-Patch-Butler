@@ -1,7 +1,7 @@
 import EventEmitter from 'events';
 import fs from 'fs';
 import path from 'path';
-import { getAppDataDirectory } from './config.js';
+import { getLogsDirectory } from './config.js';
 
 // --- Logger Constants ---
 const LOG_RETENTION_DAYS = 31;
@@ -13,7 +13,6 @@ type LogType = 'info' | 'warn' | 'error' | 'success';
 interface LogEvent {
     message: string;
     type: LogType;
-    duration?: number;
 }
 
 export class Logger extends EventEmitter {
@@ -23,8 +22,7 @@ export class Logger extends EventEmitter {
     constructor(suffix: string = 'application') {
         super();
         this.suffix = suffix;
-        this.logDir = path.join(getAppDataDirectory(), 'logs');
-        this.ensureLogDir();
+        this.logDir = getLogsDirectory();
         this.rotateLogs();
     }
 
@@ -33,16 +31,6 @@ export class Logger extends EventEmitter {
         this.rotateLogs(); // Rotate logs for the new suffix to ensure cleanup
     }
 
-    private ensureLogDir() {
-        if (!fs.existsSync(this.logDir)) {
-            try {
-                fs.mkdirSync(this.logDir, { recursive: true });
-            } catch (e) {
-                // Cannot log error if logging fails, silently fail or use console
-                console.error('Failed to create log directory:', e);
-            }
-        }
-    }
 
     private getLogFileName(): string {
         const now = new Date();
@@ -97,7 +85,6 @@ export class Logger extends EventEmitter {
 
     private writeToFile(message: string, type: LogType) {
         try {
-            this.ensureLogDir();
             const logFile = path.join(this.logDir, this.getLogFileName());
 
             // Check size before writing
@@ -118,28 +105,39 @@ export class Logger extends EventEmitter {
         }
     }
 
-    log(message: string, type: LogType = 'info', duration: number = 3000) {
+    private consoleEnabled: boolean = false;
+
+    public enableConsole() {
+        this.consoleEnabled = true;
+    }
+
+    log(message: string, type: LogType = 'info') {
         // Emit for UI
-        this.emit('log', { message, type, duration });
+        this.emit('log', { message, type });
 
         // Write to file
         this.writeToFile(message, type);
+
+        // Write to Console (if enabled)
+        if (this.consoleEnabled) {
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
     }
 
-    info(message: string, duration?: number) {
-        this.log(message, 'info', duration);
+    info(message: string) {
+        this.log(message, 'info');
     }
 
-    warn(message: string, duration?: number) {
-        this.log(message, 'warn', duration);
+    warn(message: string) {
+        this.log(message, 'warn');
     }
 
-    error(message: string, duration?: number) {
-        this.log(message, 'error', duration);
+    error(message: string) {
+        this.log(message, 'error');
     }
 
-    success(message: string, duration?: number) {
-        this.log(message, 'success', duration);
+    success(message: string) {
+        this.log(message, 'success');
     }
 }
 

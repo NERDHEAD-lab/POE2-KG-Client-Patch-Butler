@@ -24,7 +24,13 @@ const cli = meow(`
 		},
 		fixPatch: {
 			type: 'boolean'
-		}
+		},
+        disableAllConfigs: {
+            type: 'boolean'
+        },
+        cleanupTarget: {
+            type: 'string'
+        }
 	},
 	importMeta: import.meta,
 });
@@ -41,14 +47,22 @@ try {
     const { startServer } = await import('./utils/server.js');
     serverPort = (await startServer()) as number;
 } catch (e) {
-    logger.error('Failed to start local server:', e);
+    logger.error('Failed to start local server: ' + String(e));
 }
 
 if (cli.flags.watch) {
 	logger.setSuffix('watcher');
-    // Watcher mode doesn't need to pass port anywhere visually, 
-    // but the server is running for the extension to find.
+	// but the server is running for the extension to find.
 	startWatcher();
+} else if (cli.flags.disableAllConfigs) {
+    logger.enableConsole();
+    const { performFullCleanup } = await import('./utils/configCleanup.js');
+    const target = cli.flags.cleanupTarget as any; 
+    await performFullCleanup(target || 'all');
+    
+    // Add a small delay so user can read the last message
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    process.exit(0);
 } else {
 	// Check for existing instance (Close others if fix-patch, else Focus existing)
 	const shouldStart = await checkSingleInstance(cli.flags.fixPatch ?? false);

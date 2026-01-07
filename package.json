@@ -11,10 +11,11 @@
         "build": "tsc",
         "bundle": "tsup",
         "package": "node scripts/build-exe.js",
+        "package:force": "taskkill /F /IM poe2-patch-butler.exe /T 2>nul || echo No process found & npm run package",
         "dev": "ts-node src/cli.tsx",
         "start": "node dist/cli.cjs",
         "test": "echo \"Error: no test specified\" && exit 1",
-        "generate:assets": "node scripts/generate-icon.js && node scripts/generate-tray-exe.js"
+        "generate:assets": "node scripts/generate-icon.js && node scripts/generate-tray-exe.js && node scripts/generate-splash-assets.js"
     },
     "keywords": [
         "poe2",

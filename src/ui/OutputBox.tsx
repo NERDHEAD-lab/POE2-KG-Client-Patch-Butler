@@ -11,11 +11,8 @@ const OutputBox: React.FC = () => {
     const [message, setMessage] = useState<LogMessage | null>(null);
 
     useEffect(() => {
-        const handleLog = (event: { message: string, type: 'info' | 'warn' | 'error' | 'success', duration: number }) => {
+        const handleLog = (event: { message: string, type: 'info' | 'warn' | 'error' | 'success' }) => {
             setMessage({ text: event.message, type: event.type });
-            if (event.duration > 0) {
-                setTimeout(() => setMessage(null), event.duration);
-            }
         };
 
         logger.on('log', handleLog);
