@@ -105,12 +105,23 @@ export class Logger extends EventEmitter {
         }
     }
 
+    private consoleEnabled: boolean = false;
+
+    public enableConsole() {
+        this.consoleEnabled = true;
+    }
+
     log(message: string, type: LogType = 'info') {
         // Emit for UI
         this.emit('log', { message, type });
 
         // Write to file
         this.writeToFile(message, type);
+
+        // Write to Console (if enabled)
+        if (this.consoleEnabled) {
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
     }
 
     info(message: string) {

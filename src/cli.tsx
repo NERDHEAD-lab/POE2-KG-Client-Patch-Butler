@@ -55,9 +55,13 @@ if (cli.flags.watch) {
 	// but the server is running for the extension to find.
 	startWatcher();
 } else if (cli.flags.disableAllConfigs) {
+    logger.enableConsole();
     const { performFullCleanup } = await import('./utils/configCleanup.js');
     const target = cli.flags.cleanupTarget as any; 
     await performFullCleanup(target || 'all');
+    
+    // Add a small delay so user can read the last message
+    await new Promise(resolve => setTimeout(resolve, 1500));
     process.exit(0);
 } else {
 	// Check for existing instance (Close others if fix-patch, else Focus existing)
