@@ -15,7 +15,7 @@
         "dev": "ts-node src/cli.tsx",
         "start": "node dist/cli.cjs",
         "test": "echo \"Error: no test specified\" && exit 1",
-        "generate:assets": "node scripts/generate-icon.js && node scripts/generate-tray-exe.js"
+        "generate:assets": "node scripts/generate-icon.js && node scripts/generate-tray-exe.js && node scripts/generate-splash-assets.js"
     },
     "keywords": [
         "poe2",

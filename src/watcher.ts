@@ -124,37 +124,67 @@ export const startWatcher = async () => {
     logger.info('POE2 런처 감시자를 시작합니다...');
     await setupTray();
 
-    let isRunning = false;
+    let isLauncherRunning = false;
+    let didGameStart = false; // Track if game started during launcher session
     let startTime: number | null = null;
-
+    
+    // Import dynamically or at top? Top is better but we are inside function scope in original.
+    // Let's rely on imports at top of file (added below)
+    
     const runCheck = async () => {
         try {
-            const currentlyRunning = await isProcessRunning('POE2_Launcher.exe');
+            const currentLauncher = await isProcessRunning('POE2_Launcher.exe');
+            const currentGame = await isProcessRunning('PathOfExile_KG.exe');
 
-            if (currentlyRunning && !isRunning) {
-                // Process started
+            // 1. Launcher Start
+            if (currentLauncher && !isLauncherRunning) {
                 logger.info('POE2 런처가 시작되었습니다.');
-                isRunning = true;
+                isLauncherRunning = true;
                 startTime = Date.now();
-            } else if (!currentlyRunning && isRunning) {
+                didGameStart = false;
+                
+                // Show Splash
+                const { showSplash } = await import('./utils/splash.js');
+                if (!currentGame) showSplash();
+            }
+
+            // 2. Game Start
+            if (currentGame) {
+                if (!didGameStart) {
+                    if (isLauncherRunning) {
+                        logger.info('게임 클라이언트 실행 확인 (정상 진입)');
+                    } else {
+                         logger.info('게임 클라이언트 실행 중...');
+                    }
+                    didGameStart = true;
+                    // Complete Splash (Show 'Done' message)
+                    const { completeSplash } = await import('./utils/splash.js');
+                    completeSplash();
+                }
+            }
+
+            // 3. Launcher End
+            if (!currentLauncher && isLauncherRunning) {
                 // Process ended
                 logger.info('POE2 런처가 종료되었습니다.');
-                isRunning = false;
+                isLauncherRunning = false;
+                
+                // Hide Splash ensure
+                const { hideSplash } = await import('./utils/splash.js');
+                hideSplash();
 
                 if (startTime) {
                     const duration = Date.now() - startTime;
                     const minutes = duration / 1000 / 60;
-
                     logger.info(`실행 시간: ${minutes.toFixed(2)} 분`);
                 }
 
+                // Error Detection Logic (Log Check Only)
                 logger.info('오류 발생 여부를 확인하기 위해 로그를 검사합니다...');
-                // Check logs
                 try {
                     const logResult = await checkLogForErrors();
                     if (logResult.hasError) {
                         logger.warn('로그에서 오류가 감지되었습니다!');
-                        // Trigger alert
                         await triggerAlert();
                     } else {
                         logger.info('로그에서 오류가 발견되지 않았습니다.');
@@ -162,13 +192,14 @@ export const startWatcher = async () => {
                 } catch (e) {
                     logger.error('로그 검사 실패: ' + e);
                 }
+                
                 startTime = null;
             }
         } catch (e) {
             logger.error('감시자 루프 오류: ' + e);
         } finally {
             // Schedule next check
-            setTimeout(runCheck, 5000);
+            setTimeout(runCheck, 3000); // 3 seconds interval
         }
     };
 
