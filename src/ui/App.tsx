@@ -708,11 +708,11 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
         {
             keyChar: 'U',
             description: '',
-            initialVisible: !!updateInfo,
+            initialVisible: !!updateInfo && !isUpdating,
             initialStatus: updateInfo ? <Text color="green">업데이트 ({appVersion} {'->'} {updateInfo.version})</Text> : null,
             onClick: () => handleUpdate()
         }
-    ], [isAutoDetectEnabled, isSilentModeEnabled, isAutoLaunchGameEnabled, isBackupModeEnabled, isUacBypassEnabled, isSplashEnabled, installPath, serverPort, appVersion, titleVersion, maxSeenTitleVersion]);
+    ], [isAutoDetectEnabled, isSilentModeEnabled, isAutoLaunchGameEnabled, isBackupModeEnabled, isUacBypassEnabled, isSplashEnabled, installPath, serverPort, appVersion, titleVersion, maxSeenTitleVersion, updateInfo, isUpdating]);
 
     // Calculate Dynamic Sidebar Width
     const sidebarWidth = React.useMemo(() => {
@@ -810,7 +810,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
 
                 {/* Sidebar (Right) */}
                 <Sidebar
-                    key={`${installPath}-${isAutoDetectEnabled}-${isSilentModeEnabled}-${isAutoLaunchGameEnabled}-${isBackupModeEnabled}-${isUacBypassEnabled}-${isExtensionConnected}-${titleVersion}-${maxSeenTitleVersion}`} // Force remount on foundational state changes
+                    key={`${installPath}-${isAutoDetectEnabled}-${isSilentModeEnabled}-${isAutoLaunchGameEnabled}-${isBackupModeEnabled}-${isUacBypassEnabled}-${isExtensionConnected}-${titleVersion}-${maxSeenTitleVersion}-${!!updateInfo}-${isUpdating}`} // Force remount on foundational state changes
                     isActive={isInputActive}
                     items={sidebarItems} />
             </Box>
