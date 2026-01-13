@@ -565,8 +565,6 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
             onClick: (ctx: any) => {
                 (async () => {
                     const newState = !isBackupModeEnabled;
-                    setBackupEnabled(newState);
-                    setIsBackupModeEnabled(newState);
 
                     if (!newState && installPath) {
                         const { deleteBackup } = await import('../utils/restore.js');
@@ -579,7 +577,8 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
                     const { notifyBackupCreated } = await import('../utils/backupObserver.js');
                     notifyBackupCreated();
 
-                    ctx.setStatus(newState ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>);
+                    setBackupEnabled(newState);
+                    setIsBackupModeEnabled(newState);
                 })();
             }
         },
@@ -699,13 +698,11 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
                         const success = await disableUACBypass();
                         if (success) {
                             setIsUacBypassEnabled(false);
-                            ctx.setStatus(<Text color="red">OFF</Text>);
                         }
                     } else {
                         const success = await enableUACBypass();
                         if (success) {
                             setIsUacBypassEnabled(true);
-                            ctx.setStatus(<Text color="green">ON</Text>);
                         }
                     }
                 })();
@@ -723,13 +720,11 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
                         const success = await disableSplash();
                         if (success) {
                             setIsSplashEnabled(false);
-                            ctx.setStatus(<Text color="red">OFF</Text>);
                         }
                     } else {
                         const success = await enableSplash();
                         if (success) {
                             setIsSplashEnabled(true);
-                            ctx.setStatus(<Text color="green">ON</Text>);
                         }
                     }
                 })();
