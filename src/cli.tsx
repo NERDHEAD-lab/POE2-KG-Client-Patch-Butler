@@ -36,42 +36,83 @@ const cli = meow(`
 });
 
 import { logger } from './utils/logger.js';
-
-// Run migrations before anything else
 import { runMigrations } from './utils/migrations.js';
-await runMigrations();
 
-// Start Local Server for Extension Communication (Both Watcher & UI Mode)
-let serverPort = 0;
-try {
-    const { startServer } = await import('./utils/server.js');
-    serverPort = (await startServer()) as number;
-} catch (e) {
-    logger.error('Failed to start local server: ' + String(e));
-}
-
-if (cli.flags.watch) {
-	logger.setSuffix('watcher');
-	// but the server is running for the extension to find.
-	startWatcher();
-} else if (cli.flags.disableAllConfigs) {
-    logger.enableConsole();
-    const { performFullCleanup } = await import('./utils/configCleanup.js');
-    const target = cli.flags.cleanupTarget as any; 
-    await performFullCleanup(target || 'all');
+// Shared Error Handler
+const handleErrorAndWait = async (e: unknown) => {
+    logger.error('CRITICAL: Application crashed: ' + e);
+    console.error(e);
     
-    // Add a small delay so user can read the last message
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    process.exit(0);
-} else {
-	// Check for existing instance (Close others if fix-patch, else Focus existing)
-	const shouldStart = await checkSingleInstance(cli.flags.fixPatch ?? false);
-	if (!shouldStart) {
-		const { stopServer } = await import('./utils/server.js');
-		stopServer();
-		process.exit(0);
-	}
+    console.log('\nPress Enter to exit...');
+    
+    try {
+        const { createInterface } = await import('readline');
+        const rl = createInterface({
+            input: process.stdin,
+            output: process.stdout
+        });
+        
+        rl.question('', () => {
+            rl.close();
+            process.exit(1);
+        });
+    } catch (err) {
+        process.exit(1);
+    }
+};
 
-	process.title = 'POE2 Patch Butler';
-	render(<App initialMode={cli.flags.fixPatch ? 'FIX_PATCH' : 'NORMAL'} serverPort={serverPort} />);
-}
+// Global handlers for runtime crashes
+process.on('uncaughtException', (err) => {
+    handleErrorAndWait(err);
+});
+
+process.on('unhandledRejection', (reason) => {
+    handleErrorAndWait(reason);
+});
+
+// Wrap in main to catch top-level errors
+const main = async () => {
+    try {
+        // Run migrations before anything else
+        await runMigrations();
+
+        // Start Local Server for Extension Communication (Both Watcher & UI Mode)
+        let serverPort = 0;
+        try {
+            const { startServer } = await import('./utils/server.js');
+            serverPort = (await startServer()) as number;
+        } catch (e) {
+            logger.error('Failed to start local server: ' + String(e));
+        }
+
+        if (cli.flags.watch) {
+            logger.setSuffix('watcher');
+            // but the server is running for the extension to find.
+            startWatcher();
+        } else if (cli.flags.disableAllConfigs) {
+            logger.enableConsole();
+            const { performFullCleanup } = await import('./utils/configCleanup.js');
+            const target = cli.flags.cleanupTarget as any; 
+            await performFullCleanup(target || 'all');
+            
+            // Add a small delay so user can read the last message
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            process.exit(0);
+        } else {
+            // Check for existing instance (Close others if fix-patch, else Focus existing)
+            const shouldStart = await checkSingleInstance(cli.flags.fixPatch ?? false);
+            if (!shouldStart) {
+                const { stopServer } = await import('./utils/server.js');
+                stopServer();
+                process.exit(0);
+            }
+
+            process.title = 'POE2 Patch Butler';
+            render(<App initialMode={cli.flags.fixPatch ? 'FIX_PATCH' : 'NORMAL'} serverPort={serverPort} />);
+        }
+    } catch (e) {
+        handleErrorAndWait(e);
+    }
+};
+
+main();

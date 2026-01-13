@@ -4,6 +4,7 @@ import { writeFileSync, existsSync, unlinkSync } from 'node:fs';
 import { logger } from './logger.js';
 import { getBinDirectory, getLogsDirectory } from './config.js';
 
+// 컴퓨터\HKEY_CLASSES_ROOT\DaumGameStarter\Shell\Open\command
 const PROTOCOL_KEY = join('HKCR', 'daumgamestarter', 'shell', 'open', 'command');
 const BACKUP_KEY_PATH = join('HKCU', 'Software', 'DaumGames', 'POE2', 'Backup');
 const BACKUP_VALUE_NAME = 'OriginalStarterCommand';
