@@ -30,6 +30,15 @@ const config = new ConfClass({
         },
         maxSeenTitleVersion: {
             type: 'string'
+        },
+        preferredBrowserPath: {
+            type: 'string'
+        },
+        preferredBrowserProfile: {
+            type: 'string'
+        },
+        preferredBrowserDisplayName: {
+            type: 'string'
         }
     },
 });
@@ -138,3 +147,32 @@ export const _getMaxSeenTitleVersion = (): string | undefined => {
     return config.get('maxSeenTitleVersion') as string | undefined;
 };
 
+export const getPreferredBrowserPath = (): string | undefined => {
+    return config.get('preferredBrowserPath') as string | undefined;
+};
+
+export const setPreferredBrowserPath = (path: string): void => {
+    config.set('preferredBrowserPath', path);
+};
+
+export const getPreferredBrowserProfile = (): string | undefined => {
+    return config.get('preferredBrowserProfile') as string | undefined;
+};
+
+export const setPreferredBrowserProfile = (profile: string): void => {
+    config.set('preferredBrowserProfile', profile);
+};
+
+export const getPreferredBrowserDisplayName = (): string | undefined => {
+    return config.get('preferredBrowserDisplayName') as string | undefined;
+};
+
+export const setPreferredBrowserDisplayName = (displayName: string): void => {
+    config.set('preferredBrowserDisplayName', displayName);
+};
+
+export const clearBrowserPreferences = (): void => {
+    config.delete('preferredBrowserPath');
+    config.delete('preferredBrowserProfile');
+    config.delete('preferredBrowserDisplayName');
+};

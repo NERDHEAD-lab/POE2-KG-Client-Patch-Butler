@@ -8,7 +8,9 @@ import CaseExecuteFailed from './Menu/CaseExecuteFailed.js';
 import CaseCrashing from './Menu/CaseCrashing.js';
 import CaseReportIssue from './Menu/CaseReportIssue.js';
 import CaseGameRunning from './Menu/CaseGameRunning.js';
+import BrowserSelector from './BrowserSelector.js';
 import { isProcessRunning, setConsoleSize } from '../utils/process.js';
+import { launchBrowser, BrowserProfile, getBrowserNameFromPath } from '../utils/browser.js';
 import Sidebar, { SidebarItemConfig } from './Sidebar.js';
 import OutputBox from './OutputBox.js';
 import RainbowWaveText from './title/RainbowWaveText.js';
@@ -24,10 +26,10 @@ import path from 'node:path';
 import os from 'node:os';
 import { logger } from '../utils/logger.js';
 import { onExtensionEnableAutoLaunch } from '../utils/server.js';
-import { getAutoLaunchGameEnabled, setAutoLaunchGameEnabled, getSilentModeEnabled, getBackupEnabled, setBackupEnabled, _getTitleVersion, _setTitleVersion, _getMaxSeenTitleVersion, _setMaxSeenTitleVersion } from '../utils/config.js';
+import { getAutoLaunchGameEnabled, setAutoLaunchGameEnabled, getSilentModeEnabled, getBackupEnabled, setBackupEnabled, _getTitleVersion, _setTitleVersion, _getMaxSeenTitleVersion, _setMaxSeenTitleVersion, getPreferredBrowserPath, getPreferredBrowserProfile, setPreferredBrowserPath, setPreferredBrowserProfile, getPreferredBrowserDisplayName, setPreferredBrowserDisplayName } from '../utils/config.js';
 import { isAutoDetectRegistryEnabled, restartWatcher, stopWatcherProcess, enableAutoDetectRegistry, disableAutoDetectRegistry } from '../utils/autoDetect.js';
 
-type Screen = 'INIT' | 'MAIN_MENU' | 'CASE_1' | 'CASE_2' | 'CASE_3' | 'CASE_0' | 'GAME_WARNING';
+type Screen = 'INIT' | 'MAIN_MENU' | 'CASE_1' | 'CASE_2' | 'CASE_3' | 'CASE_0' | 'GAME_WARNING' | 'BROWSER_SELECT';
 
 interface AppProps {
     initialMode?: 'NORMAL' | 'FIX_PATCH';
@@ -415,6 +417,35 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
                 return <CaseReportIssue onGoBack={() => setScreen('MAIN_MENU')} />;
             case 'GAME_WARNING':
                 return <CaseGameRunning onIgnore={handleIgnoreGameWarning} onExit={handleAppExit} />;
+            case 'BROWSER_SELECT':
+                return (
+                    <BrowserSelector 
+                        onSelect={(profile) => {
+                            if (profile) {
+                                setPreferredBrowserPath(profile.executablePath);
+                                setPreferredBrowserProfile(profile.profileName);
+                                setPreferredBrowserDisplayName(profile.displayName);
+                                launchBrowser(profile, `https://nerdhead-lab.github.io/POE2-quick-launch-for-kakao/butler.html?ext_port=${serverPort}&action=enable_auto_launch`);
+                            } else {
+                                // System Default
+                                setPreferredBrowserPath('system_default');
+                                setPreferredBrowserProfile('default');
+                                setPreferredBrowserDisplayName('');
+                                launchBrowser(null, `https://nerdhead-lab.github.io/POE2-quick-launch-for-kakao/butler.html?ext_port=${serverPort}&action=enable_auto_launch`);
+                            }
+                            setScreen('MAIN_MENU');
+                        }}
+                        onCancel={() => {
+                            setScreen('MAIN_MENU');
+                            // If cancelled during enable, maybe we should not enable it?
+                            // But original logic didn't toggle state here immediately.
+                            // The 'onClick' below toggles state FIRST then launches.
+                            // If user cancels browser, the state is already ON in UI.
+                            // We should probably rollback or warn.
+                            // For now, let's just return. User can toggle OFF if they want.
+                        }}
+                    />
+                );
             default:
                 return null;
         }
@@ -435,7 +466,6 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
                 (async () => {
                     const newState = await toggleAutoDetect();
                     setIsAutoDetectEnabled(newState);
-                    ctx.setStatus(newState ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>);
                 })();
             }
         },
@@ -451,7 +481,6 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
                     const newState = !isSilentModeEnabled;
                     setSilentModeEnabled(newState);
                     setIsSilentModeEnabled(newState);
-                    ctx.setStatus(newState ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>);
                     
                     if (newState) {
                         logger.success('자동 진행 모드를 켰습니다.');
@@ -466,16 +495,62 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
             description: '게임 자동 시작:',
             isChild: true,
             disabled: !isAutoDetectEnabled,
-            initialStatus: isAutoLaunchGameEnabled ? <Text color="green"> ON</Text> : <Text color="red"> OFF</Text>,
+            initialStatus: (() => {
+                if (!isAutoLaunchGameEnabled) return <Text color="red"> OFF</Text>;
+                
+                // Get Saved Preferences synchronously
+                const path = getPreferredBrowserPath();
+                const profile = getPreferredBrowserProfile();
+                const displayName = getPreferredBrowserDisplayName();
+                
+                // 1. Legacy (No config) or Explicit System Default
+                if (!path || path === 'system_default') {
+                    return <Text color="green"> 시스템 기본값</Text>;
+                }
+
+                // Construct fallback browser name from path using helper
+                const browserName = getBrowserNameFromPath(path);
+
+                // 2. Display Name (Priority)
+                if (displayName) {
+                     // Clean display for default profiles
+                     if (profile === 'Default' || profile === 'default-release') {
+                         return <Text color="green"> {browserName}</Text>;
+                     }
+                     return <Text color="green"> {browserName} ({displayName})</Text>;
+                }
+                
+                return <Text color="green"> {browserName}</Text>;
+            })(),
             onClick: (ctx: any) => {
                 if (isAutoLaunchGameEnabled) {
-                    setAutoLaunchGameEnabled(false);
-                    setIsAutoLaunchGameEnabled(false);
-                    ctx.setStatus(<Text color="red"> OFF</Text>);
-                    logger.warn('게임 자동 시작 설정을 껐습니다.');
+                    (async () => {
+                        const { setAutoLaunchGameEnabled, clearBrowserPreferences } = await import('../utils/config.js');
+                        setAutoLaunchGameEnabled(false);
+                        clearBrowserPreferences();
+                        setIsAutoLaunchGameEnabled(false);
+                        logger.warn('게임 자동 시작 설정을 끄고 브라우저 설정을 초기화했습니다.');
+                    })();
                 } else {
-                    logger.info('게임 자동 시작 설정을 켜기 위해 브라우저를 엽니다...');
-                    spawn('cmd', ['/c', 'start', '""', `\"https://nerdhead-lab.github.io/POE2-quick-launch-for-kakao/butler.html?ext_port=${serverPort}&action=enable_auto_launch\"`], { windowsVerbatimArguments: true });
+                    const savedPath = getPreferredBrowserPath();
+                    const savedProfile = getPreferredBrowserProfile();
+
+                    if (savedPath && savedProfile) {
+                        logger.info('게임 자동 시작 설정을 켜기 위해 브라우저를 엽니다...');
+                        if (savedPath === 'system_default') {
+                             launchBrowser(null, `https://nerdhead-lab.github.io/POE2-quick-launch-for-kakao/butler.html?ext_port=${serverPort}&action=enable_auto_launch`);
+                        } else {
+                            launchBrowser({
+                                browserName: 'Chrome', // Mock, not important
+                                displayName: 'Saved',
+                                profileName: savedProfile,
+                                executablePath: savedPath
+                            }, `https://nerdhead-lab.github.io/POE2-quick-launch-for-kakao/butler.html?ext_port=${serverPort}&action=enable_auto_launch`);
+                        }
+                    } else {
+                        logger.info('저장된 브라우저 설정이 없어 선택 화면으로 이동합니다.');
+                        setScreen('BROWSER_SELECT');
+                    }
                 }
             }
         },
