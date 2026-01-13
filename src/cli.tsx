@@ -12,8 +12,10 @@ const cli = meow(`
 	  $ poe2-patch-butler
 
 	Options
-	  --watch      Start in background watcher mode
-      --fix-patch  Start directly in Patch Fix mode
+	  --watch                Start in background watcher mode
+      --fix-patch            Start directly in Patch Fix mode
+      --disable-all-configs  Reset all configurations (cleanup)
+      --cleanup-target       Specify target for cleanup (default: all)
 
 	Examples
 	  $ poe2-patch-butler --watch
