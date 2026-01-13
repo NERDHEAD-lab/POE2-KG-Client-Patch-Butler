@@ -108,11 +108,12 @@ export const detectBrowsers = (): BrowserProfile[] => {
                     const lines = content.split(/\r?\n/);
                     let currentName = '';
                     
+                    const firefoxProfiles: BrowserProfile[] = [];
                     for (const line of lines) {
                         if (line.startsWith('Name=')) {
                             currentName = line.split('=')[1].trim();
                             if (currentName) {
-                                profiles.push({
+                                firefoxProfiles.push({
                                     browserName: 'Firefox',
                                     profileName: currentName,
                                     displayName: currentName,
@@ -120,6 +121,14 @@ export const detectBrowsers = (): BrowserProfile[] => {
                                 });
                             }
                         }
+                    }
+
+                    // Filter Logic: If 'default-release' exists, hide 'default'
+                    const hasDefaultRelease = firefoxProfiles.some(p => p.profileName === 'default-release');
+                    if (hasDefaultRelease) {
+                        profiles.push(...firefoxProfiles.filter(p => p.profileName !== 'default'));
+                    } else {
+                        profiles.push(...firefoxProfiles);
                     }
                 } catch (e) {
                     logger.error(`Firefox profiles.ini 파싱 실패: ${(e as Error).message}`);
