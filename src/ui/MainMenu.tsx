@@ -17,7 +17,7 @@ const MainMenu: React.FC<MainMenuProps> = ({ onSelect, onExit }) => {
     ];
 
     useInput((input, key) => {
-        if (input === 'q' || input === 'Q') {
+        if (input.toLowerCase() === 'q') {
             onExit();
             return;
         }

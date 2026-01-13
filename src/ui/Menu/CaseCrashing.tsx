@@ -12,7 +12,8 @@ const CaseCrashing: React.FC<CaseCrashingProps> = ({ onGoBack }) => {
     }, []);
 
     useInput((input, key) => {
-        if (key.return || input === 'q' || input === 'Q') {
+        // Any key to close
+        if (input || key.return || key.escape || key.backspace || key.delete) {
             onGoBack();
         }
     });

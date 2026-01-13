@@ -209,7 +209,7 @@ const CasePatchFailed: React.FC<CasePatchFailedProps> = ({ installPath, onGoBack
 
     useInput((input, key) => {
         if (step === 'CONFIRM_FORCE') {
-            if (input === 'f' || input === 'F') {
+            if (input.toLowerCase() === 'f') {
                 if (logResult) {
                     try {
                         const newResult = generateForcePatchResult(logResult);
@@ -225,20 +225,20 @@ const CasePatchFailed: React.FC<CasePatchFailedProps> = ({ installPath, onGoBack
                         setStep('ERROR');
                     }
                 }
-            } else if (input === 's' || input === 'S') {
+            } else if (input.toLowerCase() === 's') {
                 // 스킵 로직 (필요시 구현)
-            } else if (input === 'q' || input === 'Q') {
+            } else if (input.toLowerCase() === 'q') {
                 onGoBack();
             }
         } else if (step === 'READY_TO_DOWNLOAD') {
             if (key.return) {
                 setStep('DOWNLOADING');
-            } else if (input === 'e' || input === 'E') {
+            } else if (input.toLowerCase() === 'e') {
                 if (logResult?.webRoot) {
                     setEditWebRoot(logResult.webRoot);
                     setStep('EDIT_WEBROOT');
                 }
-            } else if (input === 'q' || input === 'Q') {
+            } else if (input.toLowerCase() === 'q') {
                 onGoBack();
             }
         } else if (step === 'DONE') {
@@ -246,7 +246,7 @@ const CasePatchFailed: React.FC<CasePatchFailedProps> = ({ installPath, onGoBack
                 if (key.return) {
                     setCleanupStatus('cleaning');
                     cleanupTempDir(installPath).then(() => setCleanupStatus('done'));
-                } else if (input === 'q' || input === 'Q' || input === 'n' || input === 'N' || key.escape) {
+                } else if (input.toLowerCase() === 'q' || input.toLowerCase() === 'n' || key.escape) {
                     setCleanupStatus('kept');
                 }
             } else {

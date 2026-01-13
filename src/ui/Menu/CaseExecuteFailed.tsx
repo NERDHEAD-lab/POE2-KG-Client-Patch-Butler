@@ -156,36 +156,36 @@ const CaseExecuteFailed: React.FC<CaseExecuteFailedProps> = ({ installPath, onGo
     useInput((input, key) => {
         if (step === 'STEP1_CONFIRM') {
             if (key.return) startForcePatch();
-            else if (input === 's' || input === 'S') initStep2();
-            else if (input === 'q' || input === 'Q') onGoBack();
+            else if (input.toLowerCase() === 's') initStep2();
+            else if (input.toLowerCase() === 'q') onGoBack();
         }
         else if (step === 'STEP1_DONE') {
-            if (key.return || input === 's' || input === 'S') initStep2();
-            else if (input === 'q' || input === 'Q') onGoBack();
+            if (key.return || input.toLowerCase() === 's') initStep2();
+            else if (input.toLowerCase() === 'q') onGoBack();
         }
         else if (step === 'STEP2_CONFIRM') {
             if (key.return) {
                 if (cachePaths.length > 0) doClearCache();
                 else setStep('STEP2_DONE');
             }
-            else if (input === 's' || input === 'S') initStep3();
-            else if (input === 'q' || input === 'Q') onGoBack();
+            else if (input.toLowerCase() === 's') initStep3();
+            else if (input.toLowerCase() === 'q') onGoBack();
         }
         else if (step === 'STEP2_DONE') {
-            if (key.return || input === 's' || input === 'S') initStep3();
-            else if (input === 'q' || input === 'Q') onGoBack();
+            if (key.return || input.toLowerCase() === 's') initStep3();
+            else if (input.toLowerCase() === 'q') onGoBack();
         }
         else if (step === 'STEP3_CONFIRM') {
             if (key.return) doRunPackCheck();
-            else if (input === 's' || input === 'S') setStep('STEP4_CONFIRM');
-            else if (input === 'q' || input === 'Q') onGoBack();
+            else if (input.toLowerCase() === 's') setStep('STEP4_CONFIRM');
+            else if (input.toLowerCase() === 'q') onGoBack();
         }
         else if (step === 'STEP4_CONFIRM') {
             if (key.return) openManualGuide();
-            else if (input === 'q' || input === 'Q') onGoBack();
+            else if (input.toLowerCase() === 'q') onGoBack();
         }
         else if (step === 'ERROR') {
-            if (key.return || input === 'q' || input === 'Q') onGoBack();
+            if (key.return || input.toLowerCase() === 'q' || key.escape) onGoBack();
         }
     });
 

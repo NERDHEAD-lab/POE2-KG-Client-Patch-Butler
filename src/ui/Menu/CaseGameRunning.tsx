@@ -9,10 +9,10 @@ interface CaseGameRunningProps {
 const CaseGameRunning: React.FC<CaseGameRunningProps> = ({ onIgnore, onExit }) => {
 
     useInput((input, key) => {
-        if (input === 'f' || input === 'F') {
+        if (input.toLowerCase() === 'f') {
             onIgnore();
         }
-        if (input === 'q' || input === 'Q') {
+        if (input.toLowerCase() === 'q') {
             onExit();
         }
     });
