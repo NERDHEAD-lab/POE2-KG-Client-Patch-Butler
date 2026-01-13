@@ -74,6 +74,11 @@ Node.js 및 TypeScript 표준 컨벤션을 따릅니다.
 - **Error Handling**: 비동기 작업에 대해 `try-catch` 블록 필수 사용 및 적절한 사용자 피드백(UI) 제공
 - **Registry**: `winreg`를 감싼 유틸리티 클래스를 통해 일관된 레지스트리 접근 제어
 
+### Logging Language
+
+- **User-Facing Logs**: 모든 사용자에게 보여지는 로그(`logger.info` 등)는 **한국어(Korean)** 출력을 원칙으로 합니다.
+- **English Logs**: 디버깅 목적이나 변경 불가능한 시스템 오류 메시지(Third-party error 등)를 제외하고는 철저히 한글화를 지향합니다.
+
 ### Key Mappings (Reserved)
 
 키 입력 충돌 방지를 위해 현재 사용 중인 단축키를 명시합니다. 새로운 기능을 추가할 때 본 목록에 없는 키를 사용해야 합니다.
@@ -155,3 +160,12 @@ Node.js 및 TypeScript 표준 컨벤션을 따릅니다.
   3. PR 제출 및 배포 전 최종 검증 수단으로 이 명령어를 강제함.
 - **Status**: Accepted
 - **Date**: 2026-01-05
+
+### ADR-006: Korean Localization for Logging
+
+- **Context**: 본 프로젝트의 주 사용자는 한국어 화자이므로, 영문 로그 메시지는 사용성을 저해하고 문제 상황 인식에 방해가 됨.
+- **Decision**:
+  1. 애플리케이션의 모든 주요 로그 메시지는 **한국어**로 작성되어야 함.
+  2. 시스템 로직이나 외부 라이브러리 오류 원문 등 불가피한 경우를 제외하고는 한글 출력을 강제함.
+- **Status**: Accepted
+- **Date**: 2026-01-13

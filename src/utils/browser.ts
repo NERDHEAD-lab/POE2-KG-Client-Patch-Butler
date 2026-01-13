@@ -95,7 +95,7 @@ export const detectBrowsers = (): BrowserProfile[] => {
                         });
                     }
                 } catch (e) {
-                    logger.error(`Failed to parse Local State for ${name}: ${(e as Error).message}`);
+                    logger.error(`${name}의 Local State 파싱 실패: ${(e as Error).message}`);
                 }
             }
         } else if (info.type === 'firefox' && appData) {
@@ -122,7 +122,7 @@ export const detectBrowsers = (): BrowserProfile[] => {
                         }
                     }
                 } catch (e) {
-                    logger.error(`Failed to parse profiles.ini for Firefox: ${(e as Error).message}`);
+                    logger.error(`Firefox profiles.ini 파싱 실패: ${(e as Error).message}`);
                 }
             } else {
                 // Determine if profiles.ini missing, just add default
@@ -163,7 +163,7 @@ export const launchBrowser = (profile: BrowserProfile | null, url: string): void
         }
     }
 
-    logger.info(`Launching ${profile.browserName} (${profile.displayName})...`);
+    logger.info(`${profile.browserName} (${profile.displayName}) 실행 중...`);
     spawn(profile.executablePath, args, { detached: true });
 };
 

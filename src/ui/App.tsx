@@ -129,7 +129,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
     useEffect(() => {
         // Listen for enabled signal
         onExtensionEnableAutoLaunch(() => {
-            logger.info('Auto Launch enabled signal received! Updating UI...');
+            logger.info('게임 자동 시작이 활성화되었습니다!');
             setAutoLaunchGameEnabled(true);
             setIsAutoLaunchGameEnabled(true);
         });
@@ -160,7 +160,7 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
                 // Dynamic Import for UAC check to avoid blocking
                 const { isUACBypassEnabled: checkUac } = await import('../utils/uac.js');
                 const uac = await checkUac();
-                logger.info(`UAC Bypass: ${uac}`);
+                logger.info(`UAC 우회: ${uac}`);
 
                 // Check Splash State
                 const { isSplashEnabled: checkSplash } = await import('../utils/splash.js');

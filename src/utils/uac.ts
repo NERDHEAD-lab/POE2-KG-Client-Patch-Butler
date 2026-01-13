@@ -24,13 +24,13 @@ async function runPowerShellAsAdmin(psCommand: string): Promise<boolean> {
             if (code === 0) {
                 resolve(true);
             } else {
-                logger.error(`PowerShell execution failed with code: ${code}`);
+                logger.error(`PowerShell 실행 실패 (코드: ${code})`);
                 resolve(false);
             }
         });
 
         child.on('error', (err) => {
-            logger.error(`PowerShell execution error: ${err.message}`);
+            logger.error(`PowerShell 실행 오류: ${err.message}`);
             resolve(false);
         });
     });
@@ -69,7 +69,7 @@ function getCurrentCommand(): Promise<string | null> {
  */
 export async function isUACBypassEnabled(): Promise<boolean> {
     const cmd = await getCurrentCommand();
-    logger.info(`Current command: ${cmd}`);
+    logger.info(`현재 명령: ${cmd}`);
     if (!cmd) return false;
     return cmd.toLowerCase().includes('proxy.vbs');
 }
@@ -84,12 +84,12 @@ export async function isUACBypassEnabled(): Promise<boolean> {
 export async function enableUACBypass(): Promise<boolean> {
     const currentCmd = await getCurrentCommand();
     if (!currentCmd) {
-        logger.error('Failed to read current daumgamestarter protocol command.');
+        logger.error('현재 DaumGameStarter 프로토콜 명령을 읽을 수 없습니다.');
         return false;
     }
 
     if (currentCmd.toLowerCase().includes('proxy.vbs')) {
-        logger.info('UAC Bypass is already active.');
+        logger.info('UAC 우회가 이미 활성화되어 있습니다.');
         return true;
     }
 
@@ -103,7 +103,7 @@ export async function enableUACBypass(): Promise<boolean> {
 
     const daumStarterForScript = extractExePath(currentCmd);
     if (!daumStarterForScript) {
-        logger.error(`Failed to extract valid executable path from: ${currentCmd}`);
+        logger.error(`유효한 실행 경로를 추출할 수 없습니다: ${currentCmd}`);
         return false;
     }
 
@@ -142,7 +142,7 @@ logStream.Close
     try {
         writeFileSync(runnerVbsPath, runnerScriptContent, { encoding: 'utf16le' });
     } catch (e: any) {
-        logger.error(`Failed to create runner script: ${e.message}`);
+        logger.error(`실행 스크립트 생성 실패: ${e.message}`);
         return false;
     }
 
@@ -179,7 +179,7 @@ shell.Run "schtasks /run /tn ""${TASK_NAME}""", 0, False
     try {
         writeFileSync(proxyVbsPath, proxyScriptContent, { encoding: 'utf16le' });
     } catch (e: any) {
-        logger.error(`Failed to create proxy script: ${e.message}`);
+        logger.error(`프록시 스크립트 생성 실패: ${e.message}`);
         return false;
     }
 
@@ -204,13 +204,13 @@ shell.Run "schtasks /run /tn ""${TASK_NAME}""", 0, False
     // Combined Script
     const combinedScript = `${schCommand}\nif ($?) { ${regPsScript} } else { exit 1 }`;
     
-    logger.info('Optimizing for silent execution... (Single UAC Prompt)');
+    logger.info('조용한 실행 최적화 중... (단일 UAC 프롬프트)');
     const result = await runPowerShellAsAdmin(combinedScript);
 
     if (result) {
-        logger.success('Silent UAC Bypass applied successfully.');
+        logger.success('UAC 우회가 성공적으로 적용되었습니다.');
     } else {
-        logger.error('Failed to apply Silent UAC Bypass.');
+        logger.error('UAC 우회 적용 실패.');
     }
     
     return result;
@@ -236,12 +236,12 @@ export async function disableUACBypass(): Promise<boolean> {
     });
 
     if (!backupCmd) {
-        logger.error('No backup found. Cannot restore safely.');
+        logger.error('백업을 찾을 수 없습니다. 안전하게 복원할 수 없습니다.');
         return false;
     }
 
     if (backupCmd.toLowerCase().includes('proxy.vbs')) {
-        logger.warn('Backup seems modified. Skipping restore.');
+        logger.warn('백업이 변조된 것 같습니다. 복원을 건너뜁니다.');
         return false; 
     }
 
@@ -250,11 +250,11 @@ export async function disableUACBypass(): Promise<boolean> {
     const taskDeleteScript = `schtasks /delete /tn "${TASK_NAME}" /f`;
     const combinedRestoreScript = `${regRestoreScript}\n${taskDeleteScript}`;
 
-    logger.info('Restoring original configuration... (Single UAC Prompt)');
+    logger.info('원래 설정 복원 중... (단일 UAC 프롬프트)');
     const result = await runPowerShellAsAdmin(combinedRestoreScript);
 
     if (!result) {
-        logger.error('Failed to restore system configuration.');
+        logger.error('시스템 설정 복원 실패.');
         return false;
     }
 
@@ -271,9 +271,9 @@ export async function disableUACBypass(): Promise<boolean> {
         const logPath = join(logsDir, 'uac_debug.log');
         if (existsSync(logPath)) unlinkSync(logPath);
 
-        logger.success('Cleanup complete. UAC Bypass disabled.');
+        logger.success('정리 완료. UAC 우회가 해제되었습니다.');
     } catch (e: any) {
-        logger.warn(`Cleanup partial error: ${e.message}`);
+        logger.warn(`정리 중 일부 오류 발생: ${e.message}`);
     }
 
     return true;

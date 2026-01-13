@@ -40,7 +40,7 @@ import { runMigrations } from './utils/migrations.js';
 
 // Shared Error Handler
 const handleErrorAndWait = async (e: unknown) => {
-    logger.error('CRITICAL: Application crashed: ' + e);
+    logger.error('치명적 오류: 애플리케이션 충돌: ' + e);
     console.error(e);
     
     console.log('\nPress Enter to exit...');
@@ -82,7 +82,7 @@ const main = async () => {
             const { startServer } = await import('./utils/server.js');
             serverPort = (await startServer()) as number;
         } catch (e) {
-            logger.error('Failed to start local server: ' + String(e));
+            logger.error('로컬 서버 시작 실패: ' + String(e));
         }
 
         if (cli.flags.watch) {
