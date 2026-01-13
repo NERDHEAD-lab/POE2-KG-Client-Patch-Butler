@@ -161,7 +161,7 @@ const CasePatchFailed: React.FC<CasePatchFailedProps> = ({ installPath, onGoBack
 
                         if (preferredPath && preferredPath !== 'system_default') {
                              launchBrowser({
-                                browserName: 'Custom', 
+                                browserName: 'Default', 
                                 displayName: 'Custom',
                                 profileName: preferredProfile || 'Default',
                                 executablePath: preferredPath

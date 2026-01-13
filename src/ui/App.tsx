@@ -532,25 +532,8 @@ const App: React.FC<AppProps> = ({ initialMode = 'NORMAL', serverPort = 0 }) => 
                         logger.warn('게임 자동 시작 설정을 끄고 브라우저 설정을 초기화했습니다.');
                     })();
                 } else {
-                    const savedPath = getPreferredBrowserPath();
-                    const savedProfile = getPreferredBrowserProfile();
-
-                    if (savedPath && savedProfile) {
-                        logger.info('게임 자동 시작 설정을 켜기 위해 브라우저를 엽니다...');
-                        if (savedPath === 'system_default') {
-                             launchBrowser(null, `https://nerdhead-lab.github.io/POE2-quick-launch-for-kakao/butler.html?ext_port=${serverPort}&action=enable_auto_launch`);
-                        } else {
-                            launchBrowser({
-                                browserName: 'Chrome', // Mock, not important
-                                displayName: 'Saved',
-                                profileName: savedProfile,
-                                executablePath: savedPath
-                            }, `https://nerdhead-lab.github.io/POE2-quick-launch-for-kakao/butler.html?ext_port=${serverPort}&action=enable_auto_launch`);
-                        }
-                    } else {
-                        logger.info('저장된 브라우저 설정이 없어 선택 화면으로 이동합니다.');
-                        setScreen('BROWSER_SELECT');
-                    }
+                    logger.info('브라우저 설정을 위해 선택 화면으로 이동합니다.');
+                    setScreen('BROWSER_SELECT');
                 }
             }
         },

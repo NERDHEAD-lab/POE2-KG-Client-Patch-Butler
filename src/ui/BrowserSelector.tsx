@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Box, Text, useInput } from 'ink';
 // @ts-ignore
 import SelectInput from 'ink-select-input';
-import { BrowserProfile, detectBrowsers } from '../utils/browser.js';
+import { BrowserProfile, detectBrowsers, getSupportedBrowserNames } from '../utils/browser.js';
 import { logger } from '../utils/logger.js';
 
 interface Props {
@@ -73,9 +73,13 @@ const BrowserSelector: React.FC<Props> = ({ onSelect, onCancel }) => {
         return <Text>브라우저 목록을 불러오는 중...</Text>;
     }
 
+    const supportedBrowsers = getSupportedBrowserNames().join(', ');
+
     return (
         <Box flexDirection="column" borderStyle="round" borderColor="cyan" padding={1}>
             <Text bold color="yellow">브라우저 프로필 선택</Text>
+            <Text color="gray">지원하는 브라우저: {supportedBrowsers}</Text>
+            <Text color="gray">이외 브라우저 추가를 원하시면 문의해주세요.</Text>
             <Text color="gray">ESC를 누르면 취소합니다. 선택 시 설정이 저장됩니다.</Text>
             <Box marginTop={1}>
                 {items.length > 0 ? (

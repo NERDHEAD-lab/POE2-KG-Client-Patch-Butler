@@ -6,7 +6,7 @@ import { spawn } from 'child_process';
 import { logger } from './logger.js';
 
 export interface BrowserProfile {
-    browserName: 'Chrome' | 'Edge' | 'Whale' | 'Brave' | 'Firefox';
+    browserName: 'Chrome' | 'Edge' | 'Whale' | 'Brave' | 'Firefox' | 'Default';
     profileName: string; // "Default", "Profile 1" (Chromium) or "default-release" (Firefox)
     displayName: string; // "User 1" (Chromium) or "default-release" (Firefox)
     executablePath: string;
@@ -139,6 +139,10 @@ export const detectBrowsers = (): BrowserProfile[] => {
     return profiles;
 };
 
+export const getSupportedBrowserNames = (): string[] => {
+    return Object.keys(BROWSERS);
+};
+
 export const launchBrowser = (profile: BrowserProfile | null, url: string): void => {
     if (!profile) {
         // System Default
@@ -173,5 +177,6 @@ export const getBrowserNameFromPath = (executablePath: string | undefined): stri
             return name;
         }
     }
-    return 'Custom';
+    return 'Default';
 };
+
