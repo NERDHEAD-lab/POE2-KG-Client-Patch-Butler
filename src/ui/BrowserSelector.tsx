@@ -58,8 +58,8 @@ const BrowserSelector: React.FC<Props> = ({ onSelect, onCancel }) => {
         fetchBrowsers();
     }, []);
 
-    useInput((input, key) => {
-        if (key.escape) {
+    useInput((input, _key) => {
+        if (input.toLowerCase() === 'q') {
             onCancel();
         }
     });
@@ -80,7 +80,7 @@ const BrowserSelector: React.FC<Props> = ({ onSelect, onCancel }) => {
             <Text bold color="yellow">브라우저 프로필 선택</Text>
             <Text color="gray">지원하는 브라우저: {supportedBrowsers}</Text>
             <Text color="gray">이외 브라우저 추가를 원하시면 문의해주세요.</Text>
-            <Text color="gray">ESC를 누르면 취소합니다. 선택 시 설정이 저장됩니다.</Text>
+            <Text color="gray"><Text color="cyan">Q</Text>를 누르면 취소합니다. 선택 시 설정이 저장됩니다.</Text>
             <Box marginTop={1}>
                 {items.length > 0 ? (
                     <SelectInput items={items} onSelect={handleSelect} />
