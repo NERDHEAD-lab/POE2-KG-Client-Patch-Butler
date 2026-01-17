@@ -15,21 +15,21 @@ jobs:
   release-please:
     runs-on: windows-latest
     outputs:
-        release_created: ${{ steps.release.outputs.release_created }}
-        tag_name: ${{ steps.release.outputs.tag_name }}
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
     steps:
       - uses: actions/checkout@v4
       - uses: googleapis/release-please-action@v4
         id: release
         with:
-          token: '${{ secrets.GITHUB_TOKEN }}'
-          config-file: 'release-please-config.json'
+          token: "${{ secrets.GITHUB_TOKEN }}"
+          config-file: "release-please-config.json"
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          cache: 'npm'
+          node-version: "22"
+          cache: "npm"
 
       - name: Install Inno Setup
         run: choco install innosetup
@@ -50,5 +50,9 @@ jobs:
             poe2-patch-butler.exe
             dist/poe2-patch-butler-setup.exe
           tag_name: ${{ steps.release.outputs.tag_name }}
+          append_body: true
+          body: |
+
+            ![downloads](https://img.shields.io/github/downloads/${{ github.repository }}/${{ steps.release.outputs.tag_name }}/total)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
