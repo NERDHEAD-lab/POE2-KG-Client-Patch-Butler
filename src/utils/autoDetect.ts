@@ -7,6 +7,7 @@ import { logger } from './logger.js';
 
 const execAsync = promisify(exec);
 
+//컴퓨터\HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Run
 const REG_KEY_PATH = 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run';
 const REG_VALUE_NAME = 'POE2_Patch_Butler_Watch';
 const VBS_NAME = 'silent_launcher.vbs';

@@ -93,9 +93,9 @@ const Init: React.FC<InitProps> = ({ onDone, onExit, onStatusChange, onPathDetec
             if (key.return) {
                 // Retry check
                 checkProcessAndInit();
-            } else if (input === 'q' || input === 'Q') {
+            } else if (input.toLowerCase() === 'q') {
                 onExit();
-            } else if (input === 'f' || input === 'F') {
+            } else if (input.toLowerCase() === 'f') {
                 // Ignore warning
                 init();
             }
@@ -103,9 +103,9 @@ const Init: React.FC<InitProps> = ({ onDone, onExit, onStatusChange, onPathDetec
             if (key.return) {
                 handlePathSet(installPath);
                 onDone(installPath, version);
-            } else if (input === 'e' || input === 'E') {
+            } else if (input.toLowerCase() === 'e') {
                 setStatus('INPUT');
-            } else if (input === 'q' || input === 'Q') {
+            } else if (input.toLowerCase() === 'q') {
                 onExit();
             }
         }

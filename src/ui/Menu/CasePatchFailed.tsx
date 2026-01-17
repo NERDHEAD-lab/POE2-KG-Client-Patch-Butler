@@ -136,9 +136,10 @@ const CasePatchFailed: React.FC<CasePatchFailedProps> = ({ installPath, onGoBack
                     
                     const performAutoLaunch = async () => {
                         const { logger } = await import('../../utils/logger.js');
-                        const { spawn } = await import('child_process');
+                        // const { spawn } = await import('child_process'); // No longer needed directly
                         const { onExtensionAck } = await import('../../utils/server.js');
-                        const { setAutoLaunchGameEnabled } = await import('../../utils/config.js');
+                        const { setAutoLaunchGameEnabled, getPreferredBrowserPath, getPreferredBrowserProfile } = await import('../../utils/config.js');
+                        const { launchBrowser } = await import('../../utils/browser.js');
 
                         logger.info(`[게임 자동 시작] 게임 실행을 시도합니다... (Port: ${serverPort})`);
                         
@@ -153,18 +154,33 @@ const CasePatchFailed: React.FC<CasePatchFailedProps> = ({ installPath, onGoBack
 
                         // Call URL
                         const targetUrl = `https://pathofexile2.game.daum.net/main?butler=${serverPort}#autoStart`;
-                        spawn('cmd', ['/c', 'start', targetUrl], { windowsVerbatimArguments: true });
+                        
+                        // Use preferred browser
+                        const preferredPath = getPreferredBrowserPath();
+                        const preferredProfile = getPreferredBrowserProfile();
 
-                        // ACK Timeout Check (5s)
+                        if (preferredPath && preferredPath !== 'system_default') {
+                             launchBrowser({
+                                browserName: 'Default', 
+                                displayName: 'Custom',
+                                profileName: preferredProfile || 'Default',
+                                executablePath: preferredPath
+                             }, targetUrl);
+                        } else {
+                             // System default
+                             launchBrowser(null, targetUrl);
+                        }
+
+                        // ACK Timeout Check (10s - increased for browser launch time)
                         setTimeout(() => {
                             if (!verified) {
-                                logger.error('[게임 자동 시작] 오류: 5초간 확장 프로그램의 응답이 없습니다.');
+                                logger.error('[게임 자동 시작] 오류: 10초간 확장 프로그램의 응답이 없습니다.');
                                 logger.warn('[게임 자동 시작] 안전을 위해 "게임 자동 시작" 옵션을 끕니다. (5초 후 종료)');
                                 setAutoLaunchGameEnabled(false);
-                                // Start 5s countdown for exit (Total 10s passed from start)
+                                // Start 5s countdown for exit
                                 setCountdown(5);
                             }
-                        }, 5000);
+                        }, 10000); // 10s timeout
                     };
                     performAutoLaunch();
                 }
@@ -193,7 +209,7 @@ const CasePatchFailed: React.FC<CasePatchFailedProps> = ({ installPath, onGoBack
 
     useInput((input, key) => {
         if (step === 'CONFIRM_FORCE') {
-            if (input === 'f' || input === 'F') {
+            if (input.toLowerCase() === 'f') {
                 if (logResult) {
                     try {
                         const newResult = generateForcePatchResult(logResult);
@@ -209,20 +225,20 @@ const CasePatchFailed: React.FC<CasePatchFailedProps> = ({ installPath, onGoBack
                         setStep('ERROR');
                     }
                 }
-            } else if (input === 's' || input === 'S') {
+            } else if (input.toLowerCase() === 's') {
                 // 스킵 로직 (필요시 구현)
-            } else if (input === 'q' || input === 'Q') {
+            } else if (input.toLowerCase() === 'q') {
                 onGoBack();
             }
         } else if (step === 'READY_TO_DOWNLOAD') {
             if (key.return) {
                 setStep('DOWNLOADING');
-            } else if (input === 'e' || input === 'E') {
+            } else if (input.toLowerCase() === 'e') {
                 if (logResult?.webRoot) {
                     setEditWebRoot(logResult.webRoot);
                     setStep('EDIT_WEBROOT');
                 }
-            } else if (input === 'q' || input === 'Q') {
+            } else if (input.toLowerCase() === 'q') {
                 onGoBack();
             }
         } else if (step === 'DONE') {
@@ -230,7 +246,7 @@ const CasePatchFailed: React.FC<CasePatchFailedProps> = ({ installPath, onGoBack
                 if (key.return) {
                     setCleanupStatus('cleaning');
                     cleanupTempDir(installPath).then(() => setCleanupStatus('done'));
-                } else if (input === 'q' || input === 'Q' || input === 'n' || input === 'N' || key.escape) {
+                } else if (input.toLowerCase() === 'q' || input.toLowerCase() === 'n' || key.escape) {
                     setCleanupStatus('kept');
                 }
             } else {

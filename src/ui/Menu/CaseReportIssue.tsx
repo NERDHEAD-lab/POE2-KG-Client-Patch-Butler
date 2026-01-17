@@ -17,7 +17,7 @@ const CaseReportIssue: React.FC<CaseReportIssueProps> = ({ onGoBack }) => {
             spawn('cmd', ['/c', 'start', url], { windowsVerbatimArguments: true });
         }
 
-        if (input === 'q' || input === 'Q' || key.escape) {
+        if (input.toLowerCase() === 'q' || key.escape) {
             onGoBack();
         }
     });
