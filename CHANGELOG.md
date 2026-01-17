@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.6.0](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/compare/1.5.1...1.6.0) (2026-01-17)
+
+
+### Features
+
+* cli 모드 help 누락된 설명 추가 ([9aef657](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/9aef657a1f30c0a9163cc856454c1caf6e12941c))
+* 게임 자동 실행 시 프로필이 선택 가능하도록 개선 ([b9d01a8](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/b9d01a87ac7bbb1a9b14246ec09da354d8f7de2c))
+* 게임 자동 실행 시 프로필이 선택 가능하도록 개선 - 2 ([db18db9](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/db18db9101f685d8aac8132113ec473f042c520b))
+* 게임 자동 실행 시 프로필이 선택 가능하도록 개선 - 3 ([5820d28](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/5820d28ad2b141badcebaed832702de91ba6ea08))
+* 게임 자동 실행 시 프로필이 선택 가능하도록 개선 - 4 ([670144a](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/670144af5191cd1f6aea5406d3d79654fb56d0be))
+* 예외처리 강화 ([d9b8db4](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/d9b8db463420e52f7bf51f3ce97a758b2a904cf0))
+* 오류 메시지 일부 한글화 ([6a1c7af](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/commit/6a1c7af985c3c02c0066e6c8599af1693d23b0fe))
+
 ## [1.5.1](https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/compare/1.5.0...1.5.1) (2026-01-07)
 
 
