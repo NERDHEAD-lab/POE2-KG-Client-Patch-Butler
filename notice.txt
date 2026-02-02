@@ -1,8 +1,6 @@
-POE & POE2 빠른 실행 (Kakao) 확장 플러그인이 릴리즈 되었습니다!
-( https://gall.dcinside.com/poe2/308081 )
+PoE & PoE2 Unofficial Launcher가 릴리즈 되었습니다!
+( https://gall.dcinside.com/pathofexile/1135252 )
 
-2026-01-12: 일부 환경에서 Daumgamestarter 팝업제거 패치 후 게임 실행시 멀웨어로 오탐지 하는 문제를 확인했습니다-만,
-윈도우 디펜더 구버전에서 발생하는 문제로 확인되었습니다.
-관련하여 Microsoft 측에 소프트웨어 제출 후 문제없음을 회신 받았으며, 윈도우 디펜더 업데이트 이후 정상화를 확인 하였습니다.
-관련 이슈는 아래 링크 참고 부탁드립니다.
-( https://github.com/NERDHEAD-lab/POE2-KG-Client-Patch-Butler/issues/37 )
+기존 오류 자동 수정 기능과 게임 빠른 실행 플러그인 기능을 통합하여 좀 더 유연하고 확장성 있게 사용이 가능합니다!
+
+자세한 내용은 본문 링크 확인 부탁드립니다.
